@@ -38,6 +38,7 @@ jobs:
 
       - name: Generate version
         id: version
+        shell: bash
         run: |
           # Get base version from package.json
           BASE_VERSION=$(node -p "require('./package.json').version")
@@ -88,6 +89,7 @@ jobs:
 
       - name: Generate version
         id: version
+        shell: bash
         run: |
           # Get base version from package.json
           BASE_VERSION=$(node -p "require('./package.json').version")
@@ -115,9 +117,11 @@ jobs:
           path: ./artifacts
 
       - name: Display artifact structure
+        shell: bash
         run: find ./artifacts -type f -name "*" | head -20
 
       - name: Create Release
+        shell: bash
         run: |
           # Create release notes
           cat > release_notes.md << 'EOF'
