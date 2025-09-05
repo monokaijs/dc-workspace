@@ -1,80 +1,15 @@
-name: Build and Release
+name: Build and Release (Simple)
 
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    tags: [ 'v*' ]
+
+permissions:
+  contents: write
 
 jobs:
-  # Job to bump version and create release
-  version:
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-      tag: ${{ steps.version.outputs.tag }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'yarn'
-
-      - name: Install dependencies
-        run: yarn install --frozen-lockfile
-
-      - name: Configure Git
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-
-      - name: Bump version
-        id: version
-        run: |
-          # Get current version
-          CURRENT_VERSION=$(node -p "require('./package.json').version")
-          echo "Current version: $CURRENT_VERSION"
-
-          # Get build number from GitHub run number
-          BUILD_NUMBER=${{ github.run_number }}
-
-          # Split version into parts
-          IFS='.' read -ra VERSION_PARTS <<< "$CURRENT_VERSION"
-          MAJOR=${VERSION_PARTS[0]}
-          MINOR=${VERSION_PARTS[1]}
-
-          # Use build number as patch version for automatic incrementing
-          NEW_VERSION="$MAJOR.$MINOR.$BUILD_NUMBER"
-
-          echo "New version: $NEW_VERSION"
-
-          # Update package.json
-          npm version $NEW_VERSION --no-git-tag-version
-
-          # Commit version bump
-          git add package.json
-          git commit -m "chore: bump version to $NEW_VERSION [skip ci]" || echo "No changes to commit"
-          git push || echo "Nothing to push"
-
-          # Create and push tag
-          git tag "v$NEW_VERSION"
-          git push origin "v$NEW_VERSION"
-
-          # Set outputs
-          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "tag=v$NEW_VERSION" >> $GITHUB_OUTPUT
-
-  # Build job for Windows and macOS
-  build:
-    needs: version
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+  build-and-release:
     strategy:
       matrix:
         os: [windows-latest, macos-latest]
@@ -91,8 +26,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.version.outputs.tag }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -103,6 +36,21 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
+      - name: Generate version
+        id: version
+        run: |
+          # Get base version from package.json
+          BASE_VERSION=$(node -p "require('./package.json').version")
+          
+          # Use GitHub run number for build version
+          BUILD_VERSION="$BASE_VERSION.${{ github.run_number }}"
+          
+          echo "Generated version: $BUILD_VERSION"
+          echo "version=$BUILD_VERSION" >> $GITHUB_OUTPUT
+          
+          # Update package.json with new version
+          npm version $BUILD_VERSION --no-git-tag-version
+
       - name: Build application
         run: yarn ${{ matrix.build_command }}
         env:
@@ -111,7 +59,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.platform }}-build
+          name: ${{ matrix.platform }}-build-${{ steps.version.outputs.version }}
           path: |
             dist/*.exe
             dist/*.dmg
@@ -119,77 +67,70 @@ jobs:
             dist/*.tar.gz
           retention-days: 30
 
-  # Create GitHub release
-  release:
-    needs: [version, build]
+  create-release:
+    needs: build-and-release
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main'
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.version.outputs.tag }}
 
-      - name: Download Windows artifacts
+      - name: Generate version
+        id: version
+        run: |
+          BASE_VERSION=$(node -p "require('./package.json').version")
+          BUILD_VERSION="$BASE_VERSION.${{ github.run_number }}"
+          echo "version=$BUILD_VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$BUILD_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
-          name: win-build
-          path: ./artifacts/windows
+          path: ./artifacts
 
-      - name: Download macOS artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: mac-build
-          path: ./artifacts/macos
+      - name: Display artifact structure
+        run: find ./artifacts -type f -name "*" | head -20
 
       - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ needs.version.outputs.tag }}
-          release_name: Browser ${{ needs.version.outputs.version }}
-          body: |
-            ## Browser ${{ needs.version.outputs.version }}
-            
-            ### 🚀 Features
-            - Multi-tab browsing with persistent state
-            - Custom apps management
-            - History tracking and search
-            - Settings page for customization
-            - Keyboard shortcuts (Ctrl+T, Ctrl+W, Ctrl+1-9)
-            
-            ### 📦 Downloads
-            - **Windows**: Browser-${{ needs.version.outputs.version }}-setup.exe
-            - **macOS**: Browser-${{ needs.version.outputs.version }}.dmg
-            
-            ### 🔧 Installation
-            1. Download the appropriate file for your operating system
-            2. Run the installer
-            3. Launch the Browser application
-            
-            ### 📝 Changelog
-            - Automatic build from commit: ${{ github.sha }}
-            - Build date: ${{ github.event.head_commit.timestamp }}
-          draft: false
-          prerelease: false
-
-      - name: Find and Upload Release Assets
         run: |
-          # Find Windows installer
-          WINDOWS_INSTALLER=$(find ./artifacts/windows -name "*.exe" -type f | head -1)
-          if [ -n "$WINDOWS_INSTALLER" ]; then
-            echo "Found Windows installer: $WINDOWS_INSTALLER"
-            gh release upload ${{ needs.version.outputs.tag }} "$WINDOWS_INSTALLER" --clobber
-          fi
-
-          # Find macOS DMG
-          MACOS_DMG=$(find ./artifacts/macos -name "*.dmg" -type f | head -1)
-          if [ -n "$MACOS_DMG" ]; then
-            echo "Found macOS DMG: $MACOS_DMG"
-            gh release upload ${{ needs.version.outputs.tag }} "$MACOS_DMG" --clobber
-          fi
+          # Create release notes
+          cat > release_notes.md << 'EOF'
+          ## Browser ${{ steps.version.outputs.version }}
+          
+          ### 🚀 Features
+          - Multi-tab browsing with persistent state
+          - Custom apps management  
+          - History tracking and search
+          - Settings page for customization
+          - Keyboard shortcuts (Ctrl+T, Ctrl+W, Ctrl+1-9)
+          
+          ### 📦 Downloads
+          Download the appropriate installer for your operating system below.
+          
+          ### 🔧 Installation
+          1. Download the appropriate file for your operating system
+          2. Run the installer
+          3. Launch the Browser application
+          
+          ### 📝 Changelog
+          - Automatic build from commit: ${{ github.sha }}
+          - Build date: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          - Build number: ${{ github.run_number }}
+          EOF
+          
+          # Create the release
+          gh release create ${{ steps.version.outputs.tag }} \
+            --title "Browser ${{ steps.version.outputs.version }}" \
+            --notes-file release_notes.md \
+            --latest
+          
+          # Upload all build artifacts
+          find ./artifacts -name "*.exe" -o -name "*.dmg" | while read file; do
+            if [ -f "$file" ]; then
+              echo "Uploading: $file"
+              gh release upload ${{ steps.version.outputs.tag }} "$file" --clobber
+            fi
+          done
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
