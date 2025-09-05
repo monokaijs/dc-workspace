@@ -10,8 +10,33 @@ try {
   // Read current package.json
   const packagePath = path.join(__dirname, '..', 'package.json')
   const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'))
-  
-  console.log(`📦 Current version: ${packageJson.version}`)
+
+  console.log(`📦 Base version: ${packageJson.version}`)
+
+  // Generate timestamp-based version
+  const baseVersion = packageJson.version
+  const versionParts = baseVersion.split('.')
+  const timestamp = Math.floor(Date.now() / 1000)
+  const newVersion = `${versionParts[0]}.${versionParts[1]}.${timestamp}`
+
+  console.log(`🔢 Generated version: ${newVersion}`)
+
+  // Update package.json temporarily for build
+  packageJson.version = newVersion
+  fs.writeFileSync(packagePath, JSON.stringify(packageJson, null, 2))
+
+  // Restore original version after build
+  const originalVersion = baseVersion
+  process.on('exit', () => {
+    try {
+      const restorePackage = JSON.parse(fs.readFileSync(packagePath, 'utf8'))
+      restorePackage.version = originalVersion
+      fs.writeFileSync(packagePath, JSON.stringify(restorePackage, null, 2))
+      console.log(`🔄 Restored version to: ${originalVersion}`)
+    } catch (e) {
+      console.warn('⚠️  Could not restore original version')
+    }
+  })
   
   // Run type check
   console.log('🔍 Running type check...')

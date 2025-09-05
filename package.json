@@ -20,7 +20,8 @@
     "build:win": "npm run build && electron-builder --win",
     "build:mac": "electron-vite build && electron-builder --mac",
     "build:linux": "electron-vite build && electron-builder --linux",
-    "build:local": "node scripts/build-local.js"
+    "build:local": "node scripts/build-local.js",
+    "version:show": "node scripts/show-version.js"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.0",

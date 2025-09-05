@@ -41,13 +41,23 @@ jobs:
         run: |
           # Get base version from package.json
           BASE_VERSION=$(node -p "require('./package.json').version")
-          
-          # Use GitHub run number for build version
-          BUILD_VERSION="$BASE_VERSION.${{ github.run_number }}"
-          
+
+          # Generate timestamp
+          TIMESTAMP=$(date +%s)
+
+          # Split base version and replace last digit with timestamp
+          IFS='.' read -ra VERSION_PARTS <<< "$BASE_VERSION"
+          MAJOR=${VERSION_PARTS[0]}
+          MINOR=${VERSION_PARTS[1]}
+
+          # Create new version with timestamp as patch version
+          BUILD_VERSION="$MAJOR.$MINOR.$TIMESTAMP"
+
+          echo "Base version: $BASE_VERSION"
+          echo "Timestamp: $TIMESTAMP"
           echo "Generated version: $BUILD_VERSION"
           echo "version=$BUILD_VERSION" >> $GITHUB_OUTPUT
-          
+
           # Update package.json with new version
           npm version $BUILD_VERSION --no-git-tag-version
 
@@ -79,8 +89,23 @@ jobs:
       - name: Generate version
         id: version
         run: |
+          # Get base version from package.json
           BASE_VERSION=$(node -p "require('./package.json').version")
-          BUILD_VERSION="$BASE_VERSION.${{ github.run_number }}"
+
+          # Generate timestamp
+          TIMESTAMP=$(date +%s)
+
+          # Split base version and replace last digit with timestamp
+          IFS='.' read -ra VERSION_PARTS <<< "$BASE_VERSION"
+          MAJOR=${VERSION_PARTS[0]}
+          MINOR=${VERSION_PARTS[1]}
+
+          # Create new version with timestamp as patch version
+          BUILD_VERSION="$MAJOR.$MINOR.$TIMESTAMP"
+
+          echo "Base version: $BASE_VERSION"
+          echo "Timestamp: $TIMESTAMP"
+          echo "Generated version: $BUILD_VERSION"
           echo "version=$BUILD_VERSION" >> $GITHUB_OUTPUT
           echo "tag=v$BUILD_VERSION" >> $GITHUB_OUTPUT
 
