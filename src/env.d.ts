@@ -7,6 +7,17 @@ declare global {
       maximize: () => Promise<void>
       close: () => Promise<void>
     }
+    electron: {
+      process: {
+        versions: {
+          electron: string
+          chrome: string
+          node: string
+          [key: string]: string
+        }
+      }
+      [key: string]: any
+    }
   }
 
   namespace JSX {

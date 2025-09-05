@@ -6,7 +6,7 @@ import { WebView } from './WebView'
 import { HistoryPanel } from './HistoryPanel'
 import { SettingsPage } from './SettingsPage'
 import { Button } from '@/components/ui/button'
-import { Menu, Settings, MoreVertical, Minus, Square, X } from 'lucide-react'
+import { Menu, Settings, Minus, Square, X } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -61,20 +61,20 @@ const BrowserMenu: React.FC<BrowserMenuProps> = ({ onOpenSettings }) => {
 
 const WindowControls: React.FC = () => {
   const handleMinimize = () => {
-    if (window.electronAPI) {
-      window.electronAPI.minimize()
+    if ((window as any).electronAPI) {
+      (window as any).electronAPI.minimize()
     }
   }
 
   const handleMaximize = () => {
-    if (window.electronAPI) {
-      window.electronAPI.maximize()
+    if ((window as any).electronAPI) {
+      (window as any).electronAPI.maximize()
     }
   }
 
   const handleClose = () => {
-    if (window.electronAPI) {
-      window.electronAPI.close()
+    if ((window as any).electronAPI) {
+      (window as any).electronAPI.close()
     }
   }
 

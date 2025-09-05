@@ -22,8 +22,7 @@ export const NavigationBar: React.FC = () => {
     navigateTab,
     goBack,
     goForward,
-    refreshTab,
-    createTab
+    refreshTab
   } = useBrowser()
 
   const [addressValue, setAddressValue] = useState('')

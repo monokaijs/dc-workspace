@@ -27,7 +27,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger
 } from '@/components/ui/alert-dialog'
-import { Plus, Trash2, Edit, Globe } from 'lucide-react'
+import { Plus, Trash2, Edit } from 'lucide-react'
 import { getFaviconUrl } from '@/utils/url'
 
 interface AddAppDialogProps {
