@@ -16,10 +16,10 @@ jobs:
         include:
           - os: windows-latest
             platform: win
-            build_command: "build:win"
+            build_command: "yarn build:win"
           - os: macos-latest
             platform: mac
-            build_command: "build:mac"
+            build_command: "package-mac-signed.sh"
 
     runs-on: ${{ matrix.os }}
 
@@ -63,7 +63,7 @@ jobs:
           npm version $BUILD_VERSION --no-git-tag-version
 
       - name: Build application
-        run: yarn ${{ matrix.build_command }}
+        run: ${{ matrix.build_command }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
