@@ -47,7 +47,6 @@ const TabWebView: React.FC<TabWebViewProps> = React.memo(({
     }
 
     const handlePageFaviconUpdated = (event: any) => {
-      console.log('event', event.favicons);
       if (event.favicons && event.favicons.length > 0) {
         onUpdateFavicon(tab.id, event.favicons[0])
       }
@@ -61,7 +60,6 @@ const TabWebView: React.FC<TabWebViewProps> = React.memo(({
     const handleDidNavigate = (event: any) => {
       // Update the URL in the address bar when navigation occurs
       if (event.url !== tab.url) {
-        console.log('Navigated to:', event.url)
         onUpdateUrl(tab.id, event.url)
       }
     }
@@ -92,15 +90,17 @@ const TabWebView: React.FC<TabWebViewProps> = React.memo(({
     }
   }, [tab?.id, onUpdateLoading, onUpdateTitle, onUpdateFavicon])
 
-  // Track the last loaded URL to prevent unnecessary reloads
+  // Track the last loaded URL to prevent unnecessary reloads - unique per tab
   const lastLoadedUrlRef = React.useRef<string>('')
   const hasInitializedRef = React.useRef<boolean>(false)
+  const tabIdRef = React.useRef<string>(tab.id)
 
   useEffect(() => {
     if (tab && webviewRef.current && tab.url !== 'about:blank') {
-      // Only load if this is a genuinely new URL
+      // Only load if this is a genuinely new URL for this specific tab
       if (lastLoadedUrlRef.current !== tab.url) {
-        console.log(`Loading URL for tab ${tab.id}: ${tab.url} (previous: ${lastLoadedUrlRef.current})`)
+        // Set loading state immediately when starting to load
+        onUpdateLoading(tab.id, true)
 
         if (hasInitializedRef.current) {
           // Use loadURL for subsequent navigations to avoid reloading
@@ -114,12 +114,16 @@ const TabWebView: React.FC<TabWebViewProps> = React.memo(({
         lastLoadedUrlRef.current = tab.url
       }
     }
-  }, [tab?.url])
+  }, [tab?.url, tab?.id, onUpdateLoading])
 
   // Reset refs when tab changes to ensure proper initialization
   useEffect(() => {
-    lastLoadedUrlRef.current = ''
-    hasInitializedRef.current = false
+    // Only reset if this is actually a different tab
+    if (tabIdRef.current !== tab.id) {
+      lastLoadedUrlRef.current = ''
+      hasInitializedRef.current = false
+      tabIdRef.current = tab.id
+    }
   }, [tab?.id])
 
   useEffect(() => {
@@ -159,7 +163,7 @@ const TabWebView: React.FC<TabWebViewProps> = React.memo(({
 
       <webview
         ref={webviewRef}
-        className="w-full h-full"
+        className="w-full h-full bg-white"
         allowpopups={true}
         webpreferences="contextIsolation=true, nodeIntegration=false, webSecurity=false"
         useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -191,9 +195,18 @@ const TabWebView: React.FC<TabWebViewProps> = React.memo(({
 })
 
 export const WebView: React.FC = () => {
-  const {state, updateTabLoading, updateTabTitle, updateTabFavicon, navigateTab, updateTabUrl} = useBrowser()
+  const {state, updateTabLoading, updateTabTitle, updateTabFavicon, navigateTab, updateTabUrl, setTabNavigationBar} = useBrowser()
 
   const activeTab = state.tabs.find(tab => tab.id === state.activeTabId)
+
+  const handleAppClick = (app: any) => {
+    if (activeTab) {
+      // Navigate to the app in the current tab
+      navigateTab(activeTab.id, app.url)
+      // Set the navigation bar visibility based on the app setting
+      setTabNavigationBar(activeTab.id, !app.hideNavigationBar)
+    }
+  }
 
   if (!activeTab) {
     return (
@@ -239,7 +252,7 @@ export const WebView: React.FC = () => {
                       <Card
                         key={app.id}
                         className="p-4 cursor-pointer hover:bg-muted/50 transition-all hover:scale-105 group"
-                        onClick={() => navigateTab(activeTab.id, app.url)}
+                        onClick={() => handleAppClick(app)}
                       >
                         <div className="text-center space-y-3">
                           <div className="w-12 h-12 mx-auto rounded-lg overflow-hidden bg-muted flex items-center justify-center">
@@ -294,7 +307,7 @@ export const WebView: React.FC = () => {
       {/* Render all tabs but only show the active one */}
       {state.tabs.map(tab => (
         <TabWebView
-          key={tab.id}
+          key={`tab-${tab.id}`} // Ensure unique key per tab
           tab={tab}
           isActive={tab.id === state.activeTabId}
           onUpdateLoading={updateTabLoading}

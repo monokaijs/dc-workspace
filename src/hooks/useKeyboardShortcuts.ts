@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { useBrowser } from '@/contexts/BrowserContext'
 
 export const useKeyboardShortcuts = () => {
-  const { state, createTab, closeTab, switchTab } = useBrowser()
+  const { state, createTab, closeTab, switchTab, refreshTab } = useBrowser()
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -25,6 +25,15 @@ export const useKeyboardShortcuts = () => {
           event.preventDefault()
           if (state.activeTabId && state.tabs.length > 1) {
             closeTab(state.activeTabId)
+          }
+          break
+
+        case 'r':
+        case 'R':
+          // Ctrl + R: Refresh current tab
+          event.preventDefault()
+          if (state.activeTabId) {
+            refreshTab(state.activeTabId)
           }
           break
 
@@ -60,5 +69,5 @@ export const useKeyboardShortcuts = () => {
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [state.activeTabId, state.tabs, createTab, closeTab, switchTab])
+  }, [state.activeTabId, state.tabs, createTab, closeTab, switchTab, refreshTab])
 }

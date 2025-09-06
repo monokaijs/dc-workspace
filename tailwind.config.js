@@ -73,5 +73,52 @@ module.exports = {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [
+    require("tailwindcss-animate"),
+    function({ addUtilities }) {
+      const newUtilities = {
+        '.scrollbar-thin': {
+          '&::-webkit-scrollbar': {
+            width: '6px',
+            height: '6px',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            background: 'hsl(var(--muted-foreground) / 0.3)',
+            borderRadius: '3px',
+          },
+          '&::-webkit-scrollbar-thumb:hover': {
+            background: 'hsl(var(--muted-foreground) / 0.5)',
+          },
+          'scrollbar-width': 'thin',
+          'scrollbar-color': 'hsl(var(--muted-foreground) / 0.3) transparent',
+        },
+        '.scrollbar-hide': {
+          '-ms-overflow-style': 'none',
+          'scrollbar-width': 'none',
+          '&::-webkit-scrollbar': {
+            display: 'none',
+          },
+        },
+        '.scrollbar-overlay': {
+          '&::-webkit-scrollbar': {
+            width: '8px',
+            height: '8px',
+          },
+          '&::-webkit-scrollbar-track': {
+            background: 'transparent',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            background: 'hsl(var(--muted-foreground) / 0.4)',
+            borderRadius: '4px',
+            border: '2px solid transparent',
+            backgroundClip: 'content-box',
+          },
+          '&::-webkit-scrollbar-thumb:hover': {
+            background: 'hsl(var(--muted-foreground) / 0.6)',
+          },
+        },
+      }
+      addUtilities(newUtilities)
+    }
+  ],
 }

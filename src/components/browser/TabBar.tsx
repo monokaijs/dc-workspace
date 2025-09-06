@@ -51,7 +51,7 @@ export const TabBar: React.FC = () => {
     <div className="flex items-center bg-background border-b">
       <ScrollArea className="flex-1">
         <div className="flex items-center">
-          {state.tabs.map((tab, index) => (
+          {state.tabs.map((tab) => (
             <ContextMenu key={tab.id}>
               <ContextMenuTrigger>
                 <div
@@ -69,12 +69,6 @@ export const TabBar: React.FC = () => {
                   onDragEnd={handleDragEnd}
                   onDragOver={handleDragOver}
                 >
-                  {/* Tab number indicator for Ctrl+1-9 shortcuts */}
-                  {index < 9 && (
-                    <span className="text-xs text-muted-foreground mr-1 font-mono">
-                      {index + 1}
-                    </span>
-                  )}
 
                   {tab.isLoading && (
                     <div className="w-3 h-3 border border-primary border-t-transparent rounded-full animate-spin flex-shrink-0" />

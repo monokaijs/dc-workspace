@@ -9,7 +9,7 @@ export const isValidUrl = (string: string): boolean => {
 
 export const normalizeUrl = (input: string): string => {
   const trimmed = input.trim()
-  
+
   if (!trimmed) {
     return 'about:blank'
   }
@@ -51,7 +51,7 @@ export const formatUrlForDisplay = (url: string): string => {
   if (url === 'about:blank') {
     return ''
   }
-  
+
   try {
     const urlObj = new URL(url)
     return urlObj.href

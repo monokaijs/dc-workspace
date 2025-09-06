@@ -1,39 +1,70 @@
-import React, { useState } from 'react'
-import { BrowserProvider } from '@/contexts/BrowserContext'
-import { TabBar } from './TabBar'
-import { NavigationBar } from './NavigationBar'
-import { WebView } from './WebView'
-import { HistoryPanel } from './HistoryPanel'
-import { SettingsPage } from './SettingsPage'
-import { Button } from '@/components/ui/button'
-import { Menu, Settings, Minus, Square, X } from 'lucide-react'
+import React, {useEffect, useState} from 'react'
+import {BrowserProvider, useBrowser} from '@/contexts/BrowserContext'
+import {NotificationProvider, useNotifications} from '@/contexts/NotificationContext'
+import {TabBar} from './TabBar'
+import {NavigationBar} from './NavigationBar'
+import {WebView} from './WebView'
+import {HistoryPanel} from './HistoryPanel'
+import {SettingsPage} from './SettingsPage'
+import {DataManagement} from './DataManagement'
+import {NotificationButton} from '@/components/notifications/NotificationButton'
+import {Button} from '@/components/ui/button'
+import {Menu, Minus, Navigation, Settings, Square, X, Database} from 'lucide-react'
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
-import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
+import {useKeyboardShortcuts} from '@/hooks/useKeyboardShortcuts'
+import {PushNotificationService} from '@/services/pushNotificationService'
 
 interface BrowserMenuProps {
   onOpenSettings: () => void
 }
 
-const BrowserMenu: React.FC<BrowserMenuProps> = ({ onOpenSettings }) => {
+const BrowserMenu: React.FC<BrowserMenuProps> = ({onOpenSettings}) => {
+  const {state, toggleTabNavigationBar} = useBrowser()
+  const activeTab = state.tabs.find(tab => tab.id === state.activeTabId)
+
+  const handleToggleNavigationBar = () => {
+    if (activeTab) {
+      toggleTabNavigationBar(activeTab.id)
+    }
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-muted">
-          <Menu className="h-4 w-4" />
+          <Menu className="h-4 w-4"/>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-56">
+        <DropdownMenuCheckboxItem
+          checked={activeTab?.showNavigationBar ?? true}
+          onCheckedChange={handleToggleNavigationBar}
+          disabled={!activeTab}
+        >
+          <Navigation className="h-4 w-4 mr-2"/>
+          Show Navigation Bar
+        </DropdownMenuCheckboxItem>
+        <DropdownMenuSeparator/>
         <DropdownMenuItem onClick={onOpenSettings}>
-          <Settings className="h-4 w-4 mr-2" />
+          <Settings className="h-4 w-4 mr-2"/>
           Settings
         </DropdownMenuItem>
-        <DropdownMenuSeparator />
+        <DataManagement
+          trigger={
+            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+              <Database className="h-4 w-4 mr-2"/>
+              Data Management
+            </DropdownMenuItem>
+          }
+        />
+        <DropdownMenuSeparator/>
         <HistoryPanel
           trigger={
             <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
@@ -41,16 +72,7 @@ const BrowserMenu: React.FC<BrowserMenuProps> = ({ onOpenSettings }) => {
             </DropdownMenuItem>
           }
         />
-        <DropdownMenuSeparator />
-        <div className="px-2 py-1.5 text-xs text-muted-foreground">
-          <div className="font-medium mb-1">Keyboard Shortcuts:</div>
-          <div className="space-y-0.5">
-            <div>Ctrl+T - New Tab</div>
-            <div>Ctrl+W - Close Tab</div>
-            <div>Ctrl+1-9 - Switch Tab</div>
-          </div>
-        </div>
-        <DropdownMenuSeparator />
+        <DropdownMenuSeparator/>
         <DropdownMenuItem>
           About Browser
         </DropdownMenuItem>
@@ -86,7 +108,7 @@ const WindowControls: React.FC = () => {
         onClick={handleMinimize}
         className="h-8 w-8 p-0 hover:bg-yellow-500/20 text-muted-foreground hover:text-yellow-600"
       >
-        <Minus className="h-3 w-3" />
+        <Minus className="h-3 w-3"/>
       </Button>
       <Button
         variant="ghost"
@@ -94,7 +116,7 @@ const WindowControls: React.FC = () => {
         onClick={handleMaximize}
         className="h-8 w-8 p-0 hover:bg-green-500/20 text-muted-foreground hover:text-green-600"
       >
-        <Square className="h-3 w-3" />
+        <Square className="h-3 w-3"/>
       </Button>
       <Button
         variant="ghost"
@@ -102,7 +124,7 @@ const WindowControls: React.FC = () => {
         onClick={handleClose}
         className="h-8 w-8 p-0 hover:bg-red-500/20 text-muted-foreground hover:text-red-600"
       >
-        <X className="h-3 w-3" />
+        <X className="h-3 w-3"/>
       </Button>
     </div>
   )
@@ -110,18 +132,60 @@ const WindowControls: React.FC = () => {
 
 const BrowserContent: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false)
+  const {state} = useBrowser()
+  const {addNotification} = useNotifications()
+  const activeTab = state.tabs.find(tab => tab.id === state.activeTabId)
 
   // Enable keyboard shortcuts
   useKeyboardShortcuts()
+
+  // Initialize push notification service
+  useEffect(() => {
+    const initNotifications = async () => {
+      try {
+        console.log('Initializing push notification service...')
+        const pushService = PushNotificationService.getInstance()
+
+        // Request notification permission first
+        const permission = await pushService.requestPermission()
+        console.log('Notification permission:', permission)
+
+        // Initialize the service with callback to add notifications to history
+        await pushService.initialize((data) => {
+          console.log('Adding notification to history:', data)
+          addNotification({
+            title: data.title,
+            body: data.body,
+            icon: data.icon,
+            data: data.data
+          })
+        }, '1234567890') // Use your actual Firebase sender ID here
+
+        console.log('Push notification service initialized successfully')
+      } catch (error) {
+        console.error('Failed to initialize notification service:', error)
+      }
+    }
+
+    // Add a small delay to ensure the window is fully loaded
+    const timer = setTimeout(initNotifications, 1000)
+
+    // Cleanup on unmount
+    return () => {
+      clearTimeout(timer)
+      const pushService = PushNotificationService.getInstance()
+      pushService.destroy()
+    }
+  }, [addNotification])
 
   if (showSettings) {
     return (
       <div className="flex flex-col h-screen bg-background">
         <div
           className="flex items-center justify-between px-2 py-1 border-b bg-muted/20 select-none"
-          style={{ WebkitAppRegion: 'drag' } as any}
+          style={{WebkitAppRegion: 'drag'} as any}
         >
-          <div className="flex items-center gap-2" style={{ WebkitAppRegion: 'no-drag' } as any}>
+          <div className="flex items-center gap-2" style={{WebkitAppRegion: 'no-drag'} as any}>
             <Button
               variant="ghost"
               size="sm"
@@ -133,12 +197,12 @@ const BrowserContent: React.FC = () => {
             <span className="text-sm font-medium">Settings</span>
           </div>
 
-          <div className="flex items-center gap-2" style={{ WebkitAppRegion: 'no-drag' } as any}>
-            <WindowControls />
+          <div className="flex items-center gap-2" style={{WebkitAppRegion: 'no-drag'} as any}>
+            <WindowControls/>
           </div>
         </div>
 
-        <SettingsPage />
+        <SettingsPage/>
       </div>
     )
   }
@@ -147,21 +211,22 @@ const BrowserContent: React.FC = () => {
     <div className="flex flex-col h-screen bg-background">
       <div
         className="flex items-center justify-between px-2 py-1 border-b bg-muted/20 select-none"
-        style={{ WebkitAppRegion: 'drag' } as any}
+        style={{WebkitAppRegion: 'drag'} as any}
       >
-        <div className="flex items-center gap-2" style={{ WebkitAppRegion: 'no-drag' } as any}>
-          <BrowserMenu onOpenSettings={() => setShowSettings(true)} />
+        <div className="flex items-center gap-2" style={{WebkitAppRegion: 'no-drag'} as any}>
+          <BrowserMenu onOpenSettings={() => setShowSettings(true)}/>
           <span className="text-sm font-medium">Browser</span>
         </div>
 
-        <div className="flex items-center gap-2" style={{ WebkitAppRegion: 'no-drag' } as any}>
-          <WindowControls />
+        <div className="flex items-center gap-2" style={{WebkitAppRegion: 'no-drag'} as any}>
+          <NotificationButton/>
+          <WindowControls/>
         </div>
       </div>
 
-      <TabBar />
-      <NavigationBar />
-      <WebView />
+      <TabBar/>
+      {activeTab?.showNavigationBar && <NavigationBar/>}
+      <WebView/>
     </div>
   )
 }
@@ -169,7 +234,9 @@ const BrowserContent: React.FC = () => {
 export const Browser: React.FC = () => {
   return (
     <BrowserProvider>
-      <BrowserContent />
+      <NotificationProvider>
+        <BrowserContent/>
+      </NotificationProvider>
     </BrowserProvider>
   )
 }

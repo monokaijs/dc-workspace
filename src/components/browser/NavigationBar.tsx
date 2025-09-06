@@ -30,6 +30,7 @@ export const NavigationBar: React.FC = () => {
   const [progress, setProgress] = useState(0)
   const [showSuggestions, setShowSuggestions] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const isInteractingWithSuggestions = useRef(false)
 
   const activeTab = state.tabs.find(tab => tab.id === state.activeTabId)
 
@@ -81,16 +82,27 @@ export const NavigationBar: React.FC = () => {
     setShowSuggestions(true)
     if (activeTab?.url !== 'about:blank') {
       setAddressValue(activeTab?.url || '')
+    } else {
+      // For new tabs, ensure we start with empty value for better UX
+      setAddressValue('')
     }
     setTimeout(() => inputRef.current?.select(), 0)
   }
 
-  const handleAddressBlur = () => {
+  const handleAddressBlur = (e: React.FocusEvent) => {
+    // Don't close if focus is moving to the suggestions popover or if we're interacting with suggestions
+    if (isInteractingWithSuggestions.current ||
+        (e.relatedTarget && e.relatedTarget.closest('[data-radix-popper-content-wrapper]'))) {
+      return
+    }
+
     setTimeout(() => {
-      setIsEditing(false)
-      setShowSuggestions(false)
-      if (activeTab) {
-        setAddressValue(formatUrlForDisplay(activeTab.url))
+      if (!isInteractingWithSuggestions.current) {
+        setIsEditing(false)
+        setShowSuggestions(false)
+        if (activeTab) {
+          setAddressValue(formatUrlForDisplay(activeTab.url))
+        }
       }
     }, 150)
   }
@@ -196,6 +208,7 @@ export const NavigationBar: React.FC = () => {
           onSelect={handleSuggestionSelect}
           isOpen={showSuggestions && isEditing}
           onOpenChange={setShowSuggestions}
+          isInteractingRef={isInteractingWithSuggestions}
         >
           <form onSubmit={handleAddressSubmit} className="relative w-full">
             <div className="relative flex items-center">

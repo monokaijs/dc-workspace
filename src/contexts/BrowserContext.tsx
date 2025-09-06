@@ -1,11 +1,12 @@
-import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react'
-import { BrowserState, Tab, HistoryEntry, NavigationState, App, BrowserSettings } from '@/types/browser'
-import { getFaviconUrl } from '@/utils/url'
+import React, {createContext, ReactNode, useContext, useEffect, useReducer} from 'react'
+import {App, BrowserAction, BrowserSettings, BrowserState, HistoryEntry, NavigationState, Tab} from '@/types/browser'
+import {getFaviconUrl} from '@/utils/url'
+import {persistenceService} from '@/services/persistence'
 
 interface BrowserContextType {
   state: BrowserState
   navigationState: NavigationState
-  createTab: (url?: string) => void
+  createTab: (url?: string, hideNavigationBar?: boolean) => void
   closeTab: (tabId: string) => void
   switchTab: (tabId: string) => void
   navigateTab: (tabId: string, url: string) => void
@@ -16,6 +17,8 @@ interface BrowserContextType {
   updateTabLoading: (tabId: string, isLoading: boolean, progress?: number) => void
   updateTabTitle: (tabId: string, title: string) => void
   updateTabFavicon: (tabId: string, favicon: string) => void
+  toggleTabNavigationBar: (tabId: string) => void
+  setTabNavigationBar: (tabId: string, showNavigationBar: boolean) => void
   addToHistory: (entry: HistoryEntry) => void
   getHistory: () => HistoryEntry[]
   clearHistory: () => void
@@ -25,29 +28,9 @@ interface BrowserContextType {
   updateSettings: (settings: Partial<BrowserSettings>) => void
 }
 
-type BrowserAction =
-  | { type: 'CREATE_TAB'; payload: { url?: string } }
-  | { type: 'CLOSE_TAB'; payload: { tabId: string } }
-  | { type: 'SWITCH_TAB'; payload: { tabId: string } }
-  | { type: 'NAVIGATE_TAB'; payload: { tabId: string; url: string } }
-  | { type: 'UPDATE_TAB_URL'; payload: { tabId: string; url: string } }
-  | { type: 'GO_BACK'; payload: { tabId: string } }
-  | { type: 'GO_FORWARD'; payload: { tabId: string } }
-  | { type: 'REFRESH_TAB'; payload: { tabId: string } }
-  | { type: 'UPDATE_TAB_LOADING'; payload: { tabId: string; isLoading: boolean; progress?: number } }
-  | { type: 'UPDATE_TAB_TITLE'; payload: { tabId: string; title: string } }
-  | { type: 'UPDATE_TAB_FAVICON'; payload: { tabId: string; favicon: string } }
-  | { type: 'ADD_TO_HISTORY'; payload: { entry: HistoryEntry } }
-  | { type: 'CLEAR_HISTORY' }
-  | { type: 'ADD_APP'; payload: { app: App } }
-  | { type: 'REMOVE_APP'; payload: { appId: string } }
-  | { type: 'UPDATE_APP'; payload: { appId: string; updates: Partial<App> } }
-  | { type: 'UPDATE_SETTINGS'; payload: { settings: Partial<BrowserSettings> } }
-  | { type: 'LOAD_STATE'; payload: { state: BrowserState } }
-
 const generateId = () => Math.random().toString(36).substr(2, 9)
 
-const createNewTab = (url: string = 'about:blank'): Tab => ({
+const createNewTab = (url: string = 'about:blank', hideNavigationBar: boolean = false): Tab => ({
   id: generateId(),
   url,
   title: url === 'about:blank' ? 'New Tab' : url,
@@ -56,7 +39,8 @@ const createNewTab = (url: string = 'about:blank'): Tab => ({
   canGoBack: false,
   canGoForward: false,
   history: [],
-  currentHistoryIndex: -1
+  currentHistoryIndex: -1,
+  showNavigationBar: !hideNavigationBar
 })
 
 const defaultApps: App[] = [
@@ -68,46 +52,6 @@ const defaultApps: App[] = [
     description: 'Search the web',
     category: 'Search'
   },
-  {
-    id: generateId(),
-    name: 'GitHub',
-    url: 'https://github.com',
-    iconUrl: getFaviconUrl('https://github.com'),
-    description: 'Code repository hosting',
-    category: 'Development'
-  },
-  {
-    id: generateId(),
-    name: 'Stack Overflow',
-    url: 'https://stackoverflow.com',
-    iconUrl: getFaviconUrl('https://stackoverflow.com'),
-    description: 'Programming Q&A',
-    category: 'Development'
-  },
-  {
-    id: generateId(),
-    name: 'MDN Web Docs',
-    url: 'https://developer.mozilla.org',
-    iconUrl: getFaviconUrl('https://developer.mozilla.org'),
-    description: 'Web development documentation',
-    category: 'Development'
-  },
-  {
-    id: generateId(),
-    name: 'YouTube',
-    url: 'https://www.youtube.com',
-    iconUrl: getFaviconUrl('https://www.youtube.com'),
-    description: 'Video sharing platform',
-    category: 'Entertainment'
-  },
-  {
-    id: generateId(),
-    name: 'Twitter',
-    url: 'https://twitter.com',
-    iconUrl: getFaviconUrl('https://twitter.com'),
-    description: 'Social media platform',
-    category: 'Social'
-  }
 ]
 
 const defaultSettings: BrowserSettings = {
@@ -117,9 +61,10 @@ const defaultSettings: BrowserSettings = {
   apps: defaultApps
 }
 
+const initialTab = createNewTab()
 const initialState: BrowserState = {
-  tabs: [createNewTab()],
-  activeTabId: null,
+  tabs: [initialTab],
+  activeTabId: initialTab.id,
   globalHistory: [],
   settings: defaultSettings
 }
@@ -127,7 +72,7 @@ const initialState: BrowserState = {
 const browserReducer = (state: BrowserState, action: BrowserAction): BrowserState => {
   switch (action.type) {
     case 'CREATE_TAB': {
-      const newTab = createNewTab(action.payload.url)
+      const newTab = createNewTab(action.payload.url, action.payload.hideNavigationBar)
       return {
         ...state,
         tabs: [...state.tabs, newTab],
@@ -136,9 +81,9 @@ const browserReducer = (state: BrowserState, action: BrowserAction): BrowserStat
     }
 
     case 'CLOSE_TAB': {
-      const { tabId } = action.payload
+      const {tabId} = action.payload
       const newTabs = state.tabs.filter(tab => tab.id !== tabId)
-      
+
       if (newTabs.length === 0) {
         const newTab = createNewTab()
         return {
@@ -170,7 +115,7 @@ const browserReducer = (state: BrowserState, action: BrowserAction): BrowserStat
     }
 
     case 'NAVIGATE_TAB': {
-      const { tabId, url } = action.payload
+      const {tabId, url} = action.payload
       return {
         ...state,
         tabs: state.tabs.map(tab => {
@@ -203,7 +148,7 @@ const browserReducer = (state: BrowserState, action: BrowserAction): BrowserStat
     }
 
     case 'UPDATE_TAB_URL': {
-      const { tabId, url } = action.payload
+      const {tabId, url} = action.payload
       return {
         ...state,
         tabs: state.tabs.map(tab => {
@@ -233,14 +178,14 @@ const browserReducer = (state: BrowserState, action: BrowserAction): BrowserStat
     }
 
     case 'GO_BACK': {
-      const { tabId } = action.payload
+      const {tabId} = action.payload
       return {
         ...state,
         tabs: state.tabs.map(tab => {
           if (tab.id === tabId && tab.canGoBack) {
             const newIndex = tab.currentHistoryIndex - 1
             const historyEntry = tab.history[newIndex]
-            
+
             return {
               ...tab,
               url: historyEntry.url,
@@ -257,14 +202,14 @@ const browserReducer = (state: BrowserState, action: BrowserAction): BrowserStat
     }
 
     case 'GO_FORWARD': {
-      const { tabId } = action.payload
+      const {tabId} = action.payload
       return {
         ...state,
         tabs: state.tabs.map(tab => {
           if (tab.id === tabId && tab.canGoForward) {
             const newIndex = tab.currentHistoryIndex + 1
             const historyEntry = tab.history[newIndex]
-            
+
             return {
               ...tab,
               url: historyEntry.url,
@@ -281,58 +226,78 @@ const browserReducer = (state: BrowserState, action: BrowserAction): BrowserStat
     }
 
     case 'REFRESH_TAB': {
-      const { tabId } = action.payload
+      const {tabId} = action.payload
       return {
         ...state,
-        tabs: state.tabs.map(tab => 
-          tab.id === tabId ? { ...tab, isLoading: true } : tab
+        tabs: state.tabs.map(tab =>
+          tab.id === tabId ? {...tab, isLoading: true} : tab
         )
       }
     }
 
     case 'UPDATE_TAB_LOADING': {
-      const { tabId, isLoading } = action.payload
+      const {tabId, isLoading} = action.payload
       return {
         ...state,
-        tabs: state.tabs.map(tab => 
-          tab.id === tabId ? { ...tab, isLoading } : tab
+        tabs: state.tabs.map(tab =>
+          tab.id === tabId ? {...tab, isLoading} : tab
         )
       }
     }
 
     case 'UPDATE_TAB_TITLE': {
-      const { tabId, title } = action.payload
+      const {tabId, title} = action.payload
       return {
         ...state,
-        tabs: state.tabs.map(tab => 
-          tab.id === tabId ? { ...tab, title } : tab
+        tabs: state.tabs.map(tab =>
+          tab.id === tabId ? {...tab, title} : tab
         )
       }
     }
 
     case 'UPDATE_TAB_FAVICON': {
-      const { tabId, favicon } = action.payload
+      const {tabId, favicon} = action.payload
       return {
         ...state,
-        tabs: state.tabs.map(tab => 
-          tab.id === tabId ? { ...tab, favicon } : tab
+        tabs: state.tabs.map(tab =>
+          tab.id === tabId ? {...tab, favicon} : tab
+        )
+      }
+    }
+
+    case 'TOGGLE_TAB_NAVIGATION_BAR': {
+      const {tabId} = action.payload
+      return {
+        ...state,
+        tabs: state.tabs.map(tab =>
+          tab.id === tabId ? {...tab, showNavigationBar: !tab.showNavigationBar} : tab
+        )
+      }
+    }
+
+    case 'SET_TAB_NAVIGATION_BAR': {
+      const {tabId, showNavigationBar} = action.payload
+      return {
+        ...state,
+        tabs: state.tabs.map(tab =>
+          tab.id === tabId ? {...tab, showNavigationBar} : tab
         )
       }
     }
 
     case 'ADD_TO_HISTORY': {
-      const { entry } = action.payload
+      const {entry} = action.payload
       const existingIndex = state.globalHistory.findIndex(h => h.url === entry.url)
-      
+
       if (existingIndex >= 0) {
         const updatedHistory = [...state.globalHistory]
-        updatedHistory[existingIndex] = { ...updatedHistory[existingIndex], timestamp: entry.timestamp }
+        updatedHistory[existingIndex] = {...updatedHistory[existingIndex], timestamp: entry.timestamp}
         return {
           ...state,
           globalHistory: updatedHistory.sort((a, b) => b.timestamp - a.timestamp)
         }
       }
-      
+
       return {
         ...state,
         globalHistory: [entry, ...state.globalHistory].slice(0, 1000)
@@ -373,7 +338,7 @@ const browserReducer = (state: BrowserState, action: BrowserAction): BrowserStat
           ...state.settings,
           apps: state.settings.apps.map(app =>
             app.id === action.payload.appId
-              ? { ...app, ...action.payload.updates }
+              ? {...app, ...action.payload.updates}
               : app
           )
         }
@@ -413,53 +378,76 @@ interface BrowserProviderProps {
   children: ReactNode
 }
 
-export const BrowserProvider: React.FC<BrowserProviderProps> = ({ children }) => {
+export const BrowserProvider: React.FC<BrowserProviderProps> = ({children}) => {
   const [state, dispatch] = useReducer(browserReducer, initialState)
 
   useEffect(() => {
     if (state.tabs.length > 0 && !state.activeTabId) {
-      dispatch({ type: 'SWITCH_TAB', payload: { tabId: state.tabs[0].id } })
+      dispatch({type: 'SWITCH_TAB', payload: {tabId: state.tabs[0].id}})
     }
   }, [state.tabs, state.activeTabId])
 
   useEffect(() => {
-    const savedState = localStorage.getItem('browserState')
-    if (savedState) {
+    const loadPersistedData = async () => {
       try {
-        const parsedState = JSON.parse(savedState)
-        // Merge with default settings to ensure new settings are available
-        const mergedState = {
-          ...parsedState,
-          settings: {
-            ...defaultSettings,
-            ...parsedState.settings,
-            apps: parsedState.settings?.apps || defaultApps
-          }
-        }
+        // Try to migrate from localStorage first
+        await persistenceService.migrateFromLocalStorage()
 
-        if (mergedState.settings.restoreTabsOnStartup && mergedState.tabs?.length > 0) {
-          // Restore tabs but reset loading states
-          mergedState.tabs = mergedState.tabs.map((tab: Tab) => ({
-            ...tab,
-            isLoading: false
-          }))
-          dispatch({ type: 'LOAD_STATE', payload: { state: mergedState } })
-        } else {
-          // Don't restore tabs, but keep settings
-          dispatch({ type: 'UPDATE_SETTINGS', payload: { settings: mergedState.settings } })
+        // Load the saved state
+        const savedState = await persistenceService.loadBrowserState()
+
+        if (savedState) {
+          // Merge with default settings to ensure new settings are available
+          const mergedState = {
+            ...savedState,
+            settings: {
+              ...defaultSettings,
+              ...savedState.settings,
+              apps: savedState.settings?.apps || defaultApps
+            }
+          }
+
+          if (mergedState.settings.restoreTabsOnStartup && mergedState.tabs?.length > 0) {
+            // Restore tabs but reset loading states and ensure showNavigationBar exists
+            mergedState.tabs = mergedState.tabs.map((tab: Tab) => ({
+              ...tab,
+              isLoading: false, // Always reset loading state on restore - each tab manages its own loading
+              showNavigationBar: tab.showNavigationBar ?? true // Default to true for existing tabs
+            }))
+            // Ensure activeTabId is valid
+            if (!mergedState.activeTabId || !mergedState.tabs.find(tab => tab.id === mergedState.activeTabId)) {
+              mergedState.activeTabId = mergedState.tabs[0]?.id || null
+            }
+            dispatch({type: 'LOAD_STATE', payload: {state: mergedState}})
+          } else {
+            // Don't restore tabs, but keep settings
+            dispatch({type: 'UPDATE_SETTINGS', payload: {settings: mergedState.settings as Partial<BrowserSettings>}})
+          }
         }
       } catch (error) {
         console.error('Failed to load browser state:', error)
       }
     }
+
+    loadPersistedData()
   }, [])
 
   useEffect(() => {
-    localStorage.setItem('browserState', JSON.stringify(state))
+    const saveState = async () => {
+      try {
+        await persistenceService.saveBrowserState(state)
+      } catch (error) {
+        console.error('Failed to save browser state:', error)
+      }
+    }
+
+    // Debounce the save operation to avoid too frequent writes
+    const timeoutId = setTimeout(saveState, 500)
+    return () => clearTimeout(timeoutId)
   }, [state])
 
   const activeTab = state.tabs.find(tab => tab.id === state.activeTabId)
-  
+
   const navigationState: NavigationState = {
     isLoading: activeTab?.isLoading || false,
     progress: 0,
@@ -472,43 +460,54 @@ export const BrowserProvider: React.FC<BrowserProviderProps> = ({ children }) =>
   const contextValue: BrowserContextType = {
     state,
     navigationState,
-    createTab: (url?: string) => dispatch({ type: 'CREATE_TAB', payload: { url } }),
-    closeTab: (tabId: string) => dispatch({ type: 'CLOSE_TAB', payload: { tabId } }),
-    switchTab: (tabId: string) => dispatch({ type: 'SWITCH_TAB', payload: { tabId } }),
+    createTab: (url?: string, hideNavigationBar?: boolean) => dispatch({
+      type: 'CREATE_TAB',
+      payload: {url, hideNavigationBar}
+    }),
+    closeTab: (tabId: string) => dispatch({type: 'CLOSE_TAB', payload: {tabId}}),
+    switchTab: (tabId: string) => dispatch({type: 'SWITCH_TAB', payload: {tabId}}),
     navigateTab: (tabId: string, url: string) => {
-      dispatch({ type: 'NAVIGATE_TAB', payload: { tabId, url } })
-      dispatch({ type: 'ADD_TO_HISTORY', payload: {
-        entry: { id: generateId(), url, title: url, timestamp: Date.now(), favicon: getFaviconUrl(url) }
-      }})
+      dispatch({type: 'NAVIGATE_TAB', payload: {tabId, url}})
+      dispatch({
+        type: 'ADD_TO_HISTORY', payload: {
+          entry: {id: generateId(), url, title: url, timestamp: Date.now(), favicon: getFaviconUrl(url)}
+        }
+      })
     },
     updateTabUrl: (tabId: string, url: string) => {
-      dispatch({ type: 'UPDATE_TAB_URL', payload: { tabId, url } })
-      dispatch({ type: 'ADD_TO_HISTORY', payload: {
-        entry: { id: generateId(), url, title: url, timestamp: Date.now(), favicon: getFaviconUrl(url) }
-      }})
+      dispatch({type: 'UPDATE_TAB_URL', payload: {tabId, url}})
+      dispatch({
+        type: 'ADD_TO_HISTORY', payload: {
+          entry: {id: generateId(), url, title: url, timestamp: Date.now(), favicon: getFaviconUrl(url)}
+        }
+      })
     },
-    goBack: (tabId: string) => dispatch({ type: 'GO_BACK', payload: { tabId } }),
-    goForward: (tabId: string) => dispatch({ type: 'GO_FORWARD', payload: { tabId } }),
-    refreshTab: (tabId: string) => dispatch({ type: 'REFRESH_TAB', payload: { tabId } }),
+    goBack: (tabId: string) => dispatch({type: 'GO_BACK', payload: {tabId}}),
+    goForward: (tabId: string) => dispatch({type: 'GO_FORWARD', payload: {tabId}}),
+    refreshTab: (tabId: string) => dispatch({type: 'REFRESH_TAB', payload: {tabId}}),
     updateTabLoading: (tabId: string, isLoading: boolean, progress?: number) =>
-      dispatch({ type: 'UPDATE_TAB_LOADING', payload: { tabId, isLoading, progress } }),
+      dispatch({type: 'UPDATE_TAB_LOADING', payload: {tabId, isLoading, progress}}),
     updateTabTitle: (tabId: string, title: string) =>
-      dispatch({ type: 'UPDATE_TAB_TITLE', payload: { tabId, title } }),
+      dispatch({type: 'UPDATE_TAB_TITLE', payload: {tabId, title}}),
     updateTabFavicon: (tabId: string, favicon: string) =>
-      dispatch({ type: 'UPDATE_TAB_FAVICON', payload: { tabId, favicon } }),
+      dispatch({type: 'UPDATE_TAB_FAVICON', payload: {tabId, favicon}}),
+    toggleTabNavigationBar: (tabId: string) =>
+      dispatch({type: 'TOGGLE_TAB_NAVIGATION_BAR', payload: {tabId}}),
+    setTabNavigationBar: (tabId: string, showNavigationBar: boolean) =>
+      dispatch({type: 'SET_TAB_NAVIGATION_BAR', payload: {tabId, showNavigationBar}}),
     addToHistory: (entry: HistoryEntry) =>
-      dispatch({ type: 'ADD_TO_HISTORY', payload: { entry } }),
+      dispatch({type: 'ADD_TO_HISTORY', payload: {entry}}),
     getHistory: () => state.globalHistory,
-    clearHistory: () => dispatch({ type: 'CLEAR_HISTORY' }),
+    clearHistory: () => dispatch({type: 'CLEAR_HISTORY'}),
     addApp: (app: Omit<App, 'id'>) => {
-      const newApp: App = { ...app, id: generateId() }
-      dispatch({ type: 'ADD_APP', payload: { app: newApp } })
+      const newApp: App = {...app, id: generateId()}
+      dispatch({type: 'ADD_APP', payload: {app: newApp}})
     },
-    removeApp: (appId: string) => dispatch({ type: 'REMOVE_APP', payload: { appId } }),
+    removeApp: (appId: string) => dispatch({type: 'REMOVE_APP', payload: {appId}}),
     updateApp: (appId: string, updates: Partial<App>) =>
-      dispatch({ type: 'UPDATE_APP', payload: { appId, updates } }),
+      dispatch({type: 'UPDATE_APP', payload: {appId, updates}}),
     updateSettings: (settings: Partial<BrowserSettings>) =>
-      dispatch({ type: 'UPDATE_SETTINGS', payload: { settings } })
+      dispatch({type: 'UPDATE_SETTINGS', payload: {settings}})
   }
 
   return (
