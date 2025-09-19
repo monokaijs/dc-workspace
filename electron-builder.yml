@@ -1,5 +1,8 @@
 appId: com.browser.app
 productName: Browser
+# Enable differential downloads for efficient updates
+nsis:
+  differentialPackage: true
 directories:
   buildResources: build
 files:
@@ -29,6 +32,11 @@ mac:
     - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
     - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
   notarize: true
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+    - target: zip
+      arch: [x64, arm64]
 dmg:
   artifactName: ${productName}-${version}.${ext}
 linux:

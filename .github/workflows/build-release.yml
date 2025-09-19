@@ -1,4 +1,4 @@
-name: Build and Release (Simple)
+name: Build and Release with Auto-Update Support
 
 on:
   push:
@@ -12,14 +12,23 @@ jobs:
   build-and-release:
     strategy:
       matrix:
-        os: [windows-latest, macos-latest]
+        os: [windows-latest, macos-latest, ubuntu-latest]
         include:
           - os: windows-latest
             platform: win
             build_command: "yarn build:win"
+            artifact_pattern: "*.exe"
+            update_files: "latest.yml"
           - os: macos-latest
             platform: mac
             build_command: "yarn build:mac"
+            artifact_pattern: "*.dmg"
+            update_files: "latest-mac.yml"
+          - os: ubuntu-latest
+            platform: linux
+            build_command: "yarn build:linux"
+            artifact_pattern: "*.AppImage"
+            update_files: "latest-linux.yml"
 
     runs-on: ${{ matrix.os }}
 
@@ -36,6 +45,20 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
+      - name: Configure auto-update settings
+        shell: bash
+        run: |
+          echo "Verifying electron-builder configuration for auto-updates..."
+
+          # Ensure publish configuration is correct
+          if ! grep -q "provider: github" electron-builder.yml; then
+            echo "Warning: GitHub provider not found in electron-builder.yml"
+          fi
+
+          # Display current configuration
+          echo "Current electron-builder.yml publish section:"
+          grep -A 5 "publish:" electron-builder.yml || echo "No publish section found"
+
       - name: Generate version
         id: version
         shell: bash
@@ -43,19 +66,28 @@ jobs:
           # Get base version from package.json
           BASE_VERSION=$(node -p "require('./package.json').version")
 
-          # Generate timestamp
-          TIMESTAMP=$(date +%s)
+          # Check if this is a tag push
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            # Extract version from tag (remove 'v' prefix)
+            TAG_VERSION="${{ github.ref_name }}"
+            BUILD_VERSION="${TAG_VERSION#v}"
+            echo "Using tag version: $BUILD_VERSION"
+          else
+            # For main branch pushes, auto-increment patch version
+            IFS='.' read -ra VERSION_PARTS <<< "$BASE_VERSION"
+            MAJOR=${VERSION_PARTS[0]}
+            MINOR=${VERSION_PARTS[1]}
+            PATCH=${VERSION_PARTS[2]}
 
-          # Split base version and replace last digit with timestamp
-          IFS='.' read -ra VERSION_PARTS <<< "$BASE_VERSION"
-          MAJOR=${VERSION_PARTS[0]}
-          MINOR=${VERSION_PARTS[1]}
+            # Increment patch version and add build number
+            NEW_PATCH=$((PATCH + 1))
+            BUILD_NUMBER="${{ github.run_number }}"
+            BUILD_VERSION="$MAJOR.$MINOR.$NEW_PATCH-beta.$BUILD_NUMBER"
 
-          # Create new version with timestamp as patch version
-          BUILD_VERSION="$MAJOR.$MINOR.$TIMESTAMP"
+            echo "Auto-incremented version: $BUILD_VERSION"
+          fi
 
           echo "Base version: $BASE_VERSION"
-          echo "Timestamp: $TIMESTAMP"
           echo "Generated version: $BUILD_VERSION"
           echo "version=$BUILD_VERSION" >> $GITHUB_OUTPUT
 
@@ -66,22 +98,51 @@ jobs:
         run: ${{ matrix.build_command }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Ensure electron-builder publishes to GitHub releases
+          EP_PRE_RELEASE: false
+
+      - name: List dist contents and verify update files
+        shell: bash
+        run: |
+          echo "Contents of dist directory:"
+          ls -la dist/ || echo "No dist directory found"
+
+          echo ""
+          echo "Checking for auto-update metadata files:"
+
+          # Check for update metadata files
+          if [ -f "dist/${{ matrix.update_files }}" ]; then
+            echo "✅ Found update metadata file: ${{ matrix.update_files }}"
+            echo "Contents:"
+            cat "dist/${{ matrix.update_files }}"
+          else
+            echo "❌ Missing update metadata file: ${{ matrix.update_files }}"
+          fi
+
+          # Check for blockmap files (required for efficient updates)
+          if ls dist/*.blockmap 1> /dev/null 2>&1; then
+            echo "✅ Found blockmap files for efficient updates"
+            ls -la dist/*.blockmap
+          else
+            echo "⚠️  No blockmap files found"
+          fi
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.platform }}-build-${{ steps.version.outputs.version }}
           path: |
-            dist/*.exe
-            dist/*.dmg
+            dist/${{ matrix.artifact_pattern }}
+            dist/${{ matrix.update_files }}
+            dist/*.blockmap
             dist/*.zip
-            dist/*.tar.gz
           retention-days: 30
 
   create-release:
     needs: build-and-release
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
 
     steps:
       - name: Checkout code
@@ -94,19 +155,28 @@ jobs:
           # Get base version from package.json
           BASE_VERSION=$(node -p "require('./package.json').version")
 
-          # Generate timestamp
-          TIMESTAMP=$(date +%s)
+          # Check if this is a tag push
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            # Extract version from tag (remove 'v' prefix)
+            TAG_VERSION="${{ github.ref_name }}"
+            BUILD_VERSION="${TAG_VERSION#v}"
+            echo "Using tag version: $BUILD_VERSION"
+          else
+            # For main branch pushes, auto-increment patch version
+            IFS='.' read -ra VERSION_PARTS <<< "$BASE_VERSION"
+            MAJOR=${VERSION_PARTS[0]}
+            MINOR=${VERSION_PARTS[1]}
+            PATCH=${VERSION_PARTS[2]}
 
-          # Split base version and replace last digit with timestamp
-          IFS='.' read -ra VERSION_PARTS <<< "$BASE_VERSION"
-          MAJOR=${VERSION_PARTS[0]}
-          MINOR=${VERSION_PARTS[1]}
+            # Increment patch version and add build number
+            NEW_PATCH=$((PATCH + 1))
+            BUILD_NUMBER="${{ github.run_number }}"
+            BUILD_VERSION="$MAJOR.$MINOR.$NEW_PATCH-beta.$BUILD_NUMBER"
 
-          # Create new version with timestamp as patch version
-          BUILD_VERSION="$MAJOR.$MINOR.$TIMESTAMP"
+            echo "Auto-incremented version: $BUILD_VERSION"
+          fi
 
           echo "Base version: $BASE_VERSION"
-          echo "Timestamp: $TIMESTAMP"
           echo "Generated version: $BUILD_VERSION"
           echo "version=$BUILD_VERSION" >> $GITHUB_OUTPUT
           echo "tag=v$BUILD_VERSION" >> $GITHUB_OUTPUT
@@ -118,44 +188,118 @@ jobs:
 
       - name: Display artifact structure
         shell: bash
-        run: find ./artifacts -type f -name "*" | head -20
+        run: find ./artifacts -type f -name "*" | head -30
+
+      - name: Prepare release files
+        shell: bash
+        run: |
+          # Create a release directory
+          mkdir -p release_files
+
+          # Copy all artifacts to release directory with proper structure
+          find ./artifacts -name "*.exe" -exec cp {} release_files/ \;
+          find ./artifacts -name "*.dmg" -exec cp {} release_files/ \;
+          find ./artifacts -name "*.AppImage" -exec cp {} release_files/ \;
+          find ./artifacts -name "*.yml" -exec cp {} release_files/ \;
+          find ./artifacts -name "*.blockmap" -exec cp {} release_files/ \;
+          find ./artifacts -name "*.zip" -exec cp {} release_files/ \;
+
+          echo "Release files prepared:"
+          ls -la release_files/
+
+          # Verify auto-update files are present
+          echo ""
+          echo "Verifying auto-update support files:"
+
+          update_files_found=0
+          for file in latest.yml latest-mac.yml latest-linux.yml; do
+            if [ -f "release_files/$file" ]; then
+              echo "✅ Found: $file"
+              echo "Content preview:"
+              head -10 "release_files/$file"
+              echo "---"
+              update_files_found=$((update_files_found + 1))
+            fi
+          done
+
+          if [ $update_files_found -eq 0 ]; then
+            echo "❌ No auto-update metadata files found! Auto-updates may not work."
+          else
+            echo "✅ Found $update_files_found auto-update metadata file(s)"
+          fi
 
       - name: Create Release
         shell: bash
         run: |
+          # Determine if this is a stable or beta release
+          VERSION="${{ steps.version.outputs.version }}"
+          IS_PRERELEASE="false"
+          RELEASE_TYPE="Stable"
+
+          if [[ "$VERSION" == *"beta"* ]]; then
+            IS_PRERELEASE="true"
+            RELEASE_TYPE="Beta"
+          fi
+
           # Create release notes
-          cat > release_notes.md << 'EOF'
-          ## Browser ${{ steps.version.outputs.version }}
-          
+          cat > release_notes.md << EOF
+          ## Browser $VERSION ($RELEASE_TYPE)
+
           ### 🚀 Features
           - Multi-tab browsing with persistent state
-          - Custom apps management  
+          - Custom apps management
           - History tracking and search
           - Settings page for customization
+          - Auto-update functionality
+          - Start with system option
           - Keyboard shortcuts (Ctrl+T, Ctrl+W, Ctrl+1-9)
-          
+
           ### 📦 Downloads
           Download the appropriate installer for your operating system below.
-          
+
+          **Windows**: Download the \`.exe\` file
+          **macOS**: Download the \`.dmg\` file
+          **Linux**: Download the \`.AppImage\` file
+
+          ### 🔄 Auto-Updates
+          This release supports automatic updates. The app will check for new versions on startup and notify you when updates are available.
+
+          **Important**: For auto-updates to work properly, make sure you download and install from this GitHub release page.
+
+          ### 📋 Release Information
+          - **Version**: $VERSION
+          - **Type**: $RELEASE_TYPE
+          - **Commit**: ${{ github.sha }}
+          - **Build Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          - **Build Number**: ${{ github.run_number }}
+
           ### 🔧 Installation
           1. Download the appropriate file for your operating system
           2. Run the installer
           3. Launch the Browser application
-          
-          ### 📝 Changelog
-          - Automatic build from commit: ${{ github.sha }}
-          - Build date: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
-          - Build number: ${{ github.run_number }}
+
+          $(if [[ "$IS_PRERELEASE" == "true" ]]; then
+            echo "### ⚠️ Beta Release Notice"
+            echo "This is a beta release intended for testing. It may contain bugs or incomplete features."
+            echo "For stable releases, please check the latest non-beta version."
+          fi)
           EOF
-          
+
           # Create the release
-          gh release create ${{ steps.version.outputs.tag }} \
-            --title "Browser ${{ steps.version.outputs.version }}" \
-            --notes-file release_notes.md \
-            --latest
-          
-          # Upload all build artifacts
-          find ./artifacts -name "*.exe" -o -name "*.dmg" | while read file; do
+          RELEASE_FLAGS="--title \"Browser $VERSION\""
+          RELEASE_FLAGS="$RELEASE_FLAGS --notes-file release_notes.md"
+
+          if [[ "$IS_PRERELEASE" == "true" ]]; then
+            RELEASE_FLAGS="$RELEASE_FLAGS --prerelease"
+          else
+            RELEASE_FLAGS="$RELEASE_FLAGS --latest"
+          fi
+
+          echo "Creating release with flags: $RELEASE_FLAGS"
+          eval "gh release create ${{ steps.version.outputs.tag }} $RELEASE_FLAGS"
+
+          # Upload all release files
+          for file in release_files/*; do
             if [ -f "$file" ]; then
               echo "Uploading: $file"
               gh release upload ${{ steps.version.outputs.tag }} "$file" --clobber
