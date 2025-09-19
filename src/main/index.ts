@@ -1,10 +1,10 @@
-import {app, BrowserWindow, ipcMain, shell, Tray, Menu, nativeImage} from 'electron'
+import {app, BrowserWindow, ipcMain, shell} from 'electron'
+import * as path from 'path'
 import {join} from 'path'
 import {electronApp, is, optimizer} from '@electron-toolkit/utils'
 import {setup as setupPushReceiver} from 'electron-push-receiver'
 import {updateService} from '../services/updateService'
 import * as fs from 'fs'
-import * as path from 'path'
 import * as os from 'os'
 
 // Data persistence utilities
@@ -14,14 +14,11 @@ const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json')
 const HISTORY_FILE = path.join(DATA_DIR, 'history.json')
 const TABS_FILE = path.join(DATA_DIR, 'tabs.json')
 
-// Global variables
-let mainWindow: BrowserWindow | null = null
-let tray: Tray | null = null
 
 // Ensure data directory exists
 function ensureDataDir() {
   if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true })
+    fs.mkdirSync(DATA_DIR, {recursive: true})
   }
 }
 
