@@ -34,6 +34,7 @@ export interface BrowserSettings {
   defaultSearchEngine: string
   showAppsInNewTab: boolean
   startWithSystem: boolean
+  autoCheckUpdates: boolean
   apps: App[]
 }
 

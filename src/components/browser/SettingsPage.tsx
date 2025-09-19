@@ -28,7 +28,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger
 } from '@/components/ui/alert-dialog'
-import { Plus, Trash2, Edit, Bell, TestTube } from 'lucide-react'
+import { Plus, Trash2, Edit, Bell, TestTube, Download, RefreshCw } from 'lucide-react'
 import { getFaviconUrl } from '@/utils/url'
 import { PushNotificationService } from '@/services/pushNotificationService'
 
@@ -145,6 +145,7 @@ export const SettingsPage: React.FC = () => {
     hideNavigationBar: false
   })
   const [autoStartEnabled, setAutoStartEnabled] = useState<boolean>(false)
+  const [currentVersion, setCurrentVersion] = useState<string>('')
 
   const handleSettingChange = (key: keyof typeof state.settings, value: any) => {
     updateSettings({ [key]: value })
@@ -170,6 +171,23 @@ export const SettingsPage: React.FC = () => {
     }
   }
 
+  const handleAutoUpdateChange = async (enabled: boolean) => {
+    try {
+      await (window as any).updateAPI.setAutoCheck(enabled)
+      updateSettings({ autoCheckUpdates: enabled })
+    } catch (error) {
+      console.error('Failed to update auto-update setting:', error)
+    }
+  }
+
+  const handleCheckForUpdates = async () => {
+    try {
+      await (window as any).updateAPI.checkForUpdates(true)
+    } catch (error) {
+      console.error('Failed to check for updates:', error)
+    }
+  }
+
   useEffect(() => {
     const loadAutoStartStatus = async () => {
       try {
@@ -185,8 +203,21 @@ export const SettingsPage: React.FC = () => {
       }
     }
 
+    const loadCurrentVersion = async () => {
+      try {
+        const version = await (window as any).updateAPI.getCurrentVersion()
+        setCurrentVersion(version)
+      } catch (error) {
+        console.error('Failed to load current version:', error)
+      }
+    }
+
     if ((window as any).autoStartAPI) {
       loadAutoStartStatus()
+    }
+
+    if ((window as any).updateAPI) {
+      loadCurrentVersion()
     }
   }, [])
 
@@ -328,6 +359,45 @@ export const SettingsPage: React.FC = () => {
               <Switch
                 checked={autoStartEnabled}
                 onCheckedChange={handleAutoStartChange}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Update Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Download className="h-5 w-5" />
+              Updates
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Current Version</Label>
+                <p className="text-sm text-muted-foreground">
+                  {currentVersion || 'Loading...'}
+                </p>
+              </div>
+              <Button onClick={handleCheckForUpdates} variant="outline" size="sm">
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Check for Updates
+              </Button>
+            </div>
+
+            <Separator />
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Automatic updates</Label>
+                <p className="text-sm text-muted-foreground">
+                  Automatically check for updates when the app starts
+                </p>
+              </div>
+              <Switch
+                checked={state.settings.autoCheckUpdates}
+                onCheckedChange={handleAutoUpdateChange}
               />
             </div>
           </CardContent>

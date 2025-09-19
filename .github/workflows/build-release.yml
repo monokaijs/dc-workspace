@@ -62,10 +62,6 @@ jobs:
           # Update package.json with new version
           npm version $BUILD_VERSION --no-git-tag-version
 
-      - name: Make Mac script executable
-        if: matrix.os == 'macos-latest'
-        run: chmod +x ./package-mac-signed.sh
-
       - name: Build application
         run: ${{ matrix.build_command }}
         env:

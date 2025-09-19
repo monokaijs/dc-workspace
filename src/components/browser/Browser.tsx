@@ -8,6 +8,7 @@ import {HistoryPanel} from './HistoryPanel'
 import {SettingsPage} from './SettingsPage'
 import {DataManagement} from './DataManagement'
 import {NotificationButton} from '@/components/notifications/NotificationButton'
+import {UpdateNotification} from '../UpdateNotification'
 import {Button} from '@/components/ui/button'
 import {Menu, Minus, Navigation, Settings, Square, X, Database} from 'lucide-react'
 import {
@@ -227,6 +228,7 @@ const BrowserContent: React.FC = () => {
       <TabBar/>
       {activeTab?.showNavigationBar && <NavigationBar/>}
       <WebView/>
+      <UpdateNotification/>
     </div>
   )
 }

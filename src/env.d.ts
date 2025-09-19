@@ -23,6 +23,19 @@ declare global {
       getStatus: () => Promise<boolean>
       setStatus: (enabled: boolean) => Promise<boolean>
     }
+    updateAPI: {
+      checkForUpdates: (manual?: boolean) => Promise<boolean>
+      downloadUpdate: () => Promise<boolean>
+      installUpdate: () => Promise<void>
+      getCurrentVersion: () => Promise<string>
+      setAutoCheck: (enabled: boolean) => Promise<boolean>
+      onUpdateChecking: (callback: () => void) => () => void
+      onUpdateAvailable: (callback: (info: any) => void) => () => void
+      onUpdateNotAvailable: (callback: () => void) => () => void
+      onUpdateError: (callback: (error: string) => void) => () => void
+      onDownloadProgress: (callback: (progress: any) => void) => () => void
+      onUpdateDownloaded: (callback: (info: any) => void) => () => void
+    }
     pushNotificationAPI: {
       startService: (senderId: string) => void
       onServiceStarted: (callback: (token: string) => void) => (() => void) | void

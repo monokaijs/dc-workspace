@@ -59,6 +59,7 @@ const defaultSettings: BrowserSettings = {
   defaultSearchEngine: 'google',
   showAppsInNewTab: true,
   startWithSystem: false,
+  autoCheckUpdates: true,
   apps: defaultApps
 }
 

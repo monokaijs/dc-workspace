@@ -2,6 +2,7 @@ import {app, BrowserWindow, ipcMain, shell} from 'electron'
 import {join} from 'path'
 import {electronApp, is, optimizer} from '@electron-toolkit/utils'
 import {setup as setupPushReceiver} from 'electron-push-receiver'
+import {updateService} from '../services/updateService'
 import * as fs from 'fs'
 import * as path from 'path'
 import * as os from 'os'
@@ -219,8 +220,36 @@ app.whenReady().then(() => {
     }
   })
 
+  // Update functionality
+  ipcMain.handle('update:check', async (_, manual = false) => {
+    return await updateService.checkForUpdates(manual)
+  })
+
+  ipcMain.handle('update:download', async () => {
+    return await updateService.downloadUpdate()
+  })
+
+  ipcMain.handle('update:install', async () => {
+    await updateService.installUpdate()
+  })
+
+  ipcMain.handle('update:get-version', () => {
+    return updateService.getCurrentVersion()
+  })
+
+  ipcMain.handle('update:set-auto-check', (_, enabled: boolean) => {
+    updateService.setAutoCheckEnabled(enabled)
+    return true
+  })
+
   const browserWindow = createWindow();
   browserWindow.setMenu(null);
+
+  // Initialize update service
+  updateService.setMainWindow(browserWindow)
+
+  // Check for updates on startup
+  updateService.checkForUpdatesOnStartup()
 
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
