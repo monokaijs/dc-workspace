@@ -12,13 +12,16 @@ files:
 asarUnpack:
   - resources/**
 win:
-  executableName: Browser
+  icon: resources/icon.png
+  executableName: Workspace
+  signAndEditExecutable: true
   target:
     - target: nsis
       arch:
         - x64
         - ia32
 mac:
+  icon: resources/icon.png
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
     - NSCameraUsageDescription: Application requests access to the device's camera.
@@ -29,6 +32,7 @@ mac:
 dmg:
   artifactName: ${productName}-${version}.${ext}
 linux:
+  icon: resources/icon.png
   target:
     - AppImage
     - snap

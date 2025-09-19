@@ -19,6 +19,10 @@ declare global {
       clearAll: () => Promise<boolean>
       getDataDir: () => Promise<string>
     }
+    autoStartAPI: {
+      getStatus: () => Promise<boolean>
+      setStatus: (enabled: boolean) => Promise<boolean>
+    }
     pushNotificationAPI: {
       startService: (senderId: string) => void
       onServiceStarted: (callback: (token: string) => void) => (() => void) | void

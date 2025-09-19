@@ -58,6 +58,7 @@ const defaultSettings: BrowserSettings = {
   restoreTabsOnStartup: true,
   defaultSearchEngine: 'google',
   showAppsInNewTab: true,
+  startWithSystem: false,
   apps: defaultApps
 }
 

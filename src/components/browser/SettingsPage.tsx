@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useBrowser } from '@/contexts/BrowserContext'
 import { useNotifications } from '@/contexts/NotificationContext'
 import { App } from '@/types/browser'
@@ -144,6 +144,7 @@ export const SettingsPage: React.FC = () => {
     category: '',
     hideNavigationBar: false
   })
+  const [autoStartEnabled, setAutoStartEnabled] = useState<boolean>(false)
 
   const handleSettingChange = (key: keyof typeof state.settings, value: any) => {
     updateSettings({ [key]: value })
@@ -156,6 +157,38 @@ export const SettingsPage: React.FC = () => {
       icon: 'https://www.google.com/s2/favicons?sz=64&domain_url=https://google.com'
     })
   }
+
+  const handleAutoStartChange = async (enabled: boolean) => {
+    try {
+      const success = await (window as any).autoStartAPI.setStatus(enabled)
+      if (success) {
+        setAutoStartEnabled(enabled)
+        updateSettings({ startWithSystem: enabled })
+      }
+    } catch (error) {
+      console.error('Failed to update auto-start setting:', error)
+    }
+  }
+
+  useEffect(() => {
+    const loadAutoStartStatus = async () => {
+      try {
+        const status = await (window as any).autoStartAPI.getStatus()
+        setAutoStartEnabled(status)
+
+        // Sync the app setting with the actual system state
+        if (status !== state.settings.startWithSystem) {
+          updateSettings({ startWithSystem: status })
+        }
+      } catch (error) {
+        console.error('Failed to load auto-start status:', error)
+      }
+    }
+
+    if ((window as any).autoStartAPI) {
+      loadAutoStartStatus()
+    }
+  }, [])
 
   const handleRequestPermission = async () => {
     try {
@@ -280,6 +313,21 @@ export const SettingsPage: React.FC = () => {
               <Switch
                 checked={state.settings.showAppsInNewTab}
                 onCheckedChange={(checked) => handleSettingChange('showAppsInNewTab', checked)}
+              />
+            </div>
+
+            <Separator />
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Start with system</Label>
+                <p className="text-sm text-muted-foreground">
+                  Automatically start the browser when your system starts
+                </p>
+              </div>
+              <Switch
+                checked={autoStartEnabled}
+                onCheckedChange={handleAutoStartChange}
               />
             </div>
           </CardContent>

@@ -29,6 +29,12 @@ const dataAPI = {
   getDataDir: () => ipcRenderer.invoke('data:get-data-dir')
 }
 
+// Auto-start APIs
+const autoStartAPI = {
+  getStatus: () => ipcRenderer.invoke('auto-start:get-status'),
+  setStatus: (enabled: boolean) => ipcRenderer.invoke('auto-start:set-status', enabled)
+}
+
 // Push notification APIs
 const pushNotificationAPI = {
   startService: (senderId: string) => {
@@ -85,6 +91,7 @@ if (process.contextIsolated) {
     contextBridge.exposeInMainWorld('electron', electronAPI)
     contextBridge.exposeInMainWorld('electronAPI', api)
     contextBridge.exposeInMainWorld('dataAPI', dataAPI)
+    contextBridge.exposeInMainWorld('autoStartAPI', autoStartAPI)
     contextBridge.exposeInMainWorld('pushNotificationAPI', pushNotificationAPI)
   } catch (error) {
     console.error(error)
@@ -96,6 +103,8 @@ if (process.contextIsolated) {
   window.electronAPI = api
   // @ts-ignore (define in dts)
   window.dataAPI = dataAPI
+  // @ts-ignore (define in dts)
+  window.autoStartAPI = autoStartAPI
   // @ts-ignore (define in dts)
   window.pushNotificationAPI = pushNotificationAPI
 }

@@ -33,6 +33,7 @@ export interface BrowserSettings {
   restoreTabsOnStartup: boolean
   defaultSearchEngine: string
   showAppsInNewTab: boolean
+  startWithSystem: boolean
   apps: App[]
 }
 

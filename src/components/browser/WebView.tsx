@@ -113,6 +113,9 @@ const TabWebView: React.FC<TabWebViewProps> = React.memo(({
 
         lastLoadedUrlRef.current = tab.url
       }
+    } else if (tab && tab.url === 'about:blank') {
+      // For about:blank tabs, clear the last loaded URL but don't load anything
+      lastLoadedUrlRef.current = 'about:blank'
     }
   }, [tab?.url, tab?.id, onUpdateLoading])
 
@@ -143,10 +146,6 @@ const TabWebView: React.FC<TabWebViewProps> = React.memo(({
     }
   }
 
-  if (tab.url === 'about:blank') {
-    return null // Don't render webview for blank tabs
-  }
-
   return (
     <div
       className={`absolute inset-0 ${isActive ? 'block' : 'hidden'}`}
@@ -161,12 +160,13 @@ const TabWebView: React.FC<TabWebViewProps> = React.memo(({
         </div>
       )}
 
+      {/* Always render webview element to prevent unmounting/remounting, but hide for about:blank */}
       <webview
         ref={webviewRef}
-        className="w-full h-full bg-white"
+        className={`w-full h-full bg-white ${tab.url === 'about:blank' ? 'hidden' : ''}`}
         allowpopups={true}
         webpreferences="contextIsolation=true, nodeIntegration=false, webSecurity=false"
-        useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:143.0) Gecko/20100101 Firefox/143.0"
       />
 
       <div className="absolute inset-0 pointer-events-none">
@@ -219,92 +219,19 @@ export const WebView: React.FC = () => {
     )
   }
 
-  if (activeTab.url === 'about:blank') {
-    const apps = state.settings.apps
-    const groupedApps = apps.reduce((groups, app) => {
-      const category = app.category || 'Other'
-      if (!groups[category]) {
-        groups[category] = []
-      }
-      groups[category].push(app)
-      return groups
-    }, {} as Record<string, any[]>)
-
-    return (
-      <div className="flex-1 overflow-auto bg-background">
-        <div className="max-w-6xl mx-auto p-8">
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold mb-2">New Tab</h1>
-            <p className="text-muted-foreground">
-              Choose an app below or enter a URL in the address bar
-            </p>
-          </div>
-
-          {state.settings.showAppsInNewTab && (
-            <div className="space-y-8">
-              {Object.entries(groupedApps).map(([category, categoryApps]) => (
-                <div key={category}>
-                  <h2 className="text-xl font-semibold mb-4 text-muted-foreground">
-                    {category}
-                  </h2>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                    {categoryApps.map((app) => (
-                      <Card
-                        key={app.id}
-                        className="p-4 cursor-pointer hover:bg-muted/50 transition-all hover:scale-105 group"
-                        onClick={() => handleAppClick(app)}
-                      >
-                        <div className="text-center space-y-3">
-                          <div className="w-12 h-12 mx-auto rounded-lg overflow-hidden bg-muted flex items-center justify-center">
-                            <img
-                              src={app.iconUrl}
-                              alt={app.name}
-                              className="w-10 h-10 object-cover"
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none'
-                                e.currentTarget.parentElement!.innerHTML = `
-                                  <svg class="w-6 h-6 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9v-9m0-9v9"></path>
-                                  </svg>
-                                `
-                              }}
-                            />
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium truncate group-hover:text-primary">
-                              {app.name}
-                            </p>
-                            {app.description && (
-                              <p className="text-xs text-muted-foreground truncate mt-1">
-                                {app.description}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {!state.settings.showAppsInNewTab && (
-            <div className="text-center py-16">
-              <Globe className="h-16 w-16 mx-auto text-muted-foreground mb-4"/>
-              <p className="text-muted-foreground">
-                Apps are hidden. Enable them in Settings to see your quick access apps.
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
-    )
-  }
+  const apps = state.settings.apps
+  const groupedApps = apps.reduce((groups, app) => {
+    const category = app.category || 'Other'
+    if (!groups[category]) {
+      groups[category] = []
+    }
+    groups[category].push(app)
+    return groups
+  }, {} as Record<string, any[]>)
 
   return (
     <div className="flex-1 relative bg-background">
-      {/* Render all tabs but only show the active one */}
+      {/* Always render all tabs to prevent unmounting/remounting */}
       {state.tabs.map(tab => (
         <TabWebView
           key={`tab-${tab.id}`} // Ensure unique key per tab
@@ -317,6 +244,78 @@ export const WebView: React.FC = () => {
           onUpdateUrl={updateTabUrl}
         />
       ))}
+
+      {/* Overlay new tab page when active tab is about:blank */}
+      {activeTab.url === 'about:blank' && (
+        <div className="absolute inset-0 flex-1 overflow-auto bg-background z-10">
+          <div className="max-w-6xl mx-auto p-8">
+            <div className="text-center mb-8">
+              <h1 className="text-4xl font-bold mb-2">New Tab</h1>
+              <p className="text-muted-foreground">
+                Choose an app below or enter a URL in the address bar
+              </p>
+            </div>
+
+            {state.settings.showAppsInNewTab && (
+              <div className="space-y-8">
+                {Object.entries(groupedApps).map(([category, categoryApps]) => (
+                  <div key={category}>
+                    <h2 className="text-xl font-semibold mb-4 text-muted-foreground">
+                      {category}
+                    </h2>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                      {categoryApps.map((app) => (
+                        <Card
+                          key={app.id}
+                          className="p-4 cursor-pointer hover:bg-muted/50 transition-all hover:scale-105 group"
+                          onClick={() => handleAppClick(app)}
+                        >
+                          <div className="text-center space-y-3">
+                            <div className="w-12 h-12 mx-auto rounded-lg overflow-hidden bg-muted flex items-center justify-center">
+                              <img
+                                src={app.iconUrl}
+                                alt={app.name}
+                                className="w-10 h-10 object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none'
+                                  e.currentTarget.parentElement!.innerHTML = `
+                                    <svg class="w-6 h-6 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9v-9m0-9v9"></path>
+                                    </svg>
+                                  `
+                                }}
+                              />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium truncate group-hover:text-primary">
+                                {app.name}
+                              </p>
+                              {app.description && (
+                                <p className="text-xs text-muted-foreground truncate mt-1">
+                                  {app.description}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {!state.settings.showAppsInNewTab && (
+              <div className="text-center py-16">
+                <Globe className="h-16 w-16 mx-auto text-muted-foreground mb-4"/>
+                <p className="text-muted-foreground">
+                  Apps are hidden. Enable them in Settings to see your quick access apps.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

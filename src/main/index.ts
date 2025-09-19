@@ -79,7 +79,9 @@ function createWindow(): BrowserWindow {
   })
 
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
+    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'], {
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36'
+    })
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
@@ -148,6 +150,47 @@ app.whenReady().then(() => {
 
   ipcMain.handle('data:get-data-dir', () => {
     return DATA_DIR
+  })
+
+  // Auto-start functionality
+  ipcMain.handle('auto-start:get-status', () => {
+    try {
+      const settings = app.getLoginItemSettings()
+      return settings.openAtLogin
+    } catch (error) {
+      console.error('Error getting auto-start status:', error)
+      return false
+    }
+  })
+
+  ipcMain.handle('auto-start:set-status', (_, enabled: boolean) => {
+    try {
+      const loginItemSettings: any = {
+        openAtLogin: enabled
+      }
+
+      // On macOS, we need to specify the path for development builds
+      if (process.platform === 'darwin' && !app.isPackaged) {
+        loginItemSettings.path = process.execPath
+        loginItemSettings.args = [process.argv[1]]
+      }
+      // On Windows, specify the path for both dev and production
+      else if (process.platform === 'win32') {
+        loginItemSettings.path = process.execPath
+        if (!app.isPackaged) {
+          loginItemSettings.args = [process.argv[1]]
+        }
+      }
+
+      app.setLoginItemSettings(loginItemSettings)
+
+      // Verify the setting was applied
+      const verification = app.getLoginItemSettings()
+      return verification.openAtLogin === enabled
+    } catch (error) {
+      console.error('Error setting auto-start:', error)
+      return false
+    }
   })
 
   // Window controls
