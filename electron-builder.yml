@@ -15,6 +15,7 @@ win:
   icon: resources/icon.png
   executableName: Workspace
   signAndEditExecutable: true
+  publisherName: "MonokaiJs"
   target:
     - target: nsis
       arch:
@@ -46,3 +47,4 @@ publish:
   provider: github
   owner: monokaijs
   repo: dc-workspace
+  releaseType: release

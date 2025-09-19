@@ -16,10 +16,10 @@ jobs:
         include:
           - os: windows-latest
             platform: win
-            build_command: "yarn build:win"
+            build_command: "npm run build && electron-builder --win"
           - os: macos-latest
             platform: mac
-            build_command: "yarn build:mac"
+            build_command: "npm run build && electron-builder --mac"
 
     runs-on: ${{ matrix.os }}
 
@@ -76,6 +76,8 @@ jobs:
             dist/*.dmg
             dist/*.zip
             dist/*.tar.gz
+            dist/*.yml
+            dist/*.blockmap
           retention-days: 30
 
   create-release:
@@ -155,7 +157,7 @@ jobs:
             --latest
           
           # Upload all build artifacts
-          find ./artifacts -name "*.exe" -o -name "*.dmg" | while read file; do
+          find ./artifacts -name "*.exe" -o -name "*.dmg" -o -name "*.yml" -o -name "*.blockmap" | while read file; do
             if [ -f "$file" ]; then
               echo "Uploading: $file"
               gh release upload ${{ steps.version.outputs.tag }} "$file" --clobber
