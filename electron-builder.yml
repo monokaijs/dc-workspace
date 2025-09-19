@@ -1,5 +1,5 @@
-appId: com.browser.app
-productName: Browser
+appId: com.monokaijs.workspace
+productName: Workspace
 directories:
   buildResources: build
 files:
@@ -23,13 +23,17 @@ win:
         - ia32
 mac:
   icon: resources/icon.png
+  category: public.app-category.productivity
+  hardenedRuntime: true
+  entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
     - NSCameraUsageDescription: Application requests access to the device's camera.
     - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
     - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
     - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
-  notarize: true
+  notarize:
+    appBundleId: com.diningconnect.workspace
 dmg:
   artifactName: ${productName}-${version}.${ext}
 linux:
@@ -38,7 +42,7 @@ linux:
     - AppImage
     - snap
     - deb
-  maintainer: electronjs.org
+  maintainer: monokaijs.com
   category: Utility
 appImage:
   artifactName: ${name}-${version}.${ext}
