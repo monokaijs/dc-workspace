@@ -10,7 +10,7 @@ import {DataManagement} from './DataManagement'
 import {NotificationButton} from '@/components/notifications/NotificationButton'
 import {UpdateNotification} from '../UpdateNotification'
 import {Button} from '@/components/ui/button'
-import {Menu, Minus, Navigation, Settings, Square, X, Database} from 'lucide-react'
+import {Menu, Minus, Navigation, Settings, Square, X, Database, Code} from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -33,6 +33,12 @@ const BrowserMenu: React.FC<BrowserMenuProps> = ({onOpenSettings}) => {
   const handleToggleNavigationBar = () => {
     if (activeTab) {
       toggleTabNavigationBar(activeTab.id)
+    }
+  }
+
+  const handleShowDevTools = () => {
+    if (activeTab) {
+      window.dispatchEvent(new CustomEvent('browser-show-devtools', { detail: { tabId: activeTab.id } }))
     }
   }
 
@@ -73,9 +79,16 @@ const BrowserMenu: React.FC<BrowserMenuProps> = ({onOpenSettings}) => {
             </DropdownMenuItem>
           }
         />
+        <DropdownMenuItem
+          onClick={handleShowDevTools}
+          disabled={!activeTab || activeTab.url === 'about:blank'}
+        >
+          <Code className="h-4 w-4 mr-2"/>
+          Show DevTools
+        </DropdownMenuItem>
         <DropdownMenuSeparator/>
         <DropdownMenuItem>
-          About Browser
+          About App
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -216,7 +229,7 @@ const BrowserContent: React.FC = () => {
       >
         <div className="flex items-center gap-2" style={{WebkitAppRegion: 'no-drag'} as any}>
           <BrowserMenu onOpenSettings={() => setShowSettings(true)}/>
-          <span className="text-sm font-medium">Browser</span>
+          <span className="text-sm font-medium">Workspace</span>
         </div>
 
         <div className="flex items-center gap-2" style={{WebkitAppRegion: 'no-drag'} as any}>

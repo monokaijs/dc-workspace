@@ -136,8 +136,18 @@ const TabWebView: React.FC<TabWebViewProps> = React.memo(({
       }
     }
 
+    const handleShowDevTools = (event: CustomEvent) => {
+      if (tab && event.detail.tabId === tab.id && webviewRef.current) {
+        webviewRef.current.openDevTools()
+      }
+    }
+
     window.addEventListener('browser-refresh', handleRefresh as EventListener)
-    return () => window.removeEventListener('browser-refresh', handleRefresh as EventListener)
+    window.addEventListener('browser-show-devtools', handleShowDevTools as EventListener)
+    return () => {
+      window.removeEventListener('browser-refresh', handleRefresh as EventListener)
+      window.removeEventListener('browser-show-devtools', handleShowDevTools as EventListener)
+    }
   }, [tab?.id])
 
   const handleRetry = () => {

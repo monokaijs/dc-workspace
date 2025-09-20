@@ -414,7 +414,7 @@ export const SettingsPage: React.FC = () => {
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label>Browser Notifications</Label>
+                <Label>Notifications</Label>
                 <p className="text-sm text-muted-foreground">
                   Allow the browser to show desktop notifications
                 </p>
