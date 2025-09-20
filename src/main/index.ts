@@ -1,4 +1,4 @@
-import {app, BrowserWindow, ipcMain, shell} from 'electron'
+import {app, BrowserWindow, ipcMain, shell, Tray, Menu, nativeImage, Notification} from 'electron'
 import * as path from 'path'
 import {join} from 'path'
 import {electronApp, is, optimizer} from '@electron-toolkit/utils'
@@ -13,6 +13,10 @@ const BROWSER_STATE_FILE = path.join(DATA_DIR, 'browser-state.json')
 const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json')
 const HISTORY_FILE = path.join(DATA_DIR, 'history.json')
 const TABS_FILE = path.join(DATA_DIR, 'tabs.json')
+
+// Global variables
+let mainWindow: BrowserWindow | null = null
+let tray: Tray | null = null
 
 
 // Ensure data directory exists
@@ -47,8 +51,63 @@ async function writeDataFile(filePath: string, data: any): Promise<boolean> {
   }
 }
 
+function createTray() {
+  const iconPath = path.join(__dirname, '../../resources/icon.png')
+  let trayIcon: Electron.NativeImage
+
+  try {
+    trayIcon = nativeImage.createFromPath(iconPath)
+    if (trayIcon.isEmpty()) {
+      trayIcon = nativeImage.createEmpty()
+    }
+  } catch (error) {
+    trayIcon = nativeImage.createEmpty()
+  }
+
+  tray = new Tray(trayIcon)
+
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: 'Show Workspace',
+      click: () => {
+        if (mainWindow) {
+          mainWindow.show()
+          mainWindow.focus()
+        }
+      }
+    },
+    {
+      label: 'Quit',
+      click: () => {
+        app.quit()
+      }
+    }
+  ])
+
+  tray.setToolTip('Workspace Browser - Click to show/hide')
+  tray.setContextMenu(contextMenu)
+
+  tray.on('click', () => {
+    if (mainWindow) {
+      if (mainWindow.isVisible()) {
+        mainWindow.hide()
+      } else {
+        mainWindow.show()
+        mainWindow.focus()
+      }
+    }
+  })
+
+  tray.on('double-click', () => {
+    if (mainWindow) {
+      mainWindow.show()
+      mainWindow.focus()
+    }
+  })
+}
+
 function createWindow(): BrowserWindow {
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     minWidth: 800,
@@ -72,7 +131,14 @@ function createWindow(): BrowserWindow {
   console.log('Push receiver setup completed for main window')
 
   mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
+    mainWindow?.show()
+  })
+
+  mainWindow.on('close', (event) => {
+    if (!(app as any).isQuitting) {
+      event.preventDefault()
+      mainWindow?.hide()
+    }
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -215,10 +281,22 @@ app.whenReady().then(() => {
   })
 
   ipcMain.handle('window-close', () => {
-    const focusedWindow = BrowserWindow.getFocusedWindow()
-    if (focusedWindow) {
-      focusedWindow.close()
+    if (mainWindow) {
+      mainWindow.hide()
+
+      // Show notification when minimized to tray
+      if (Notification.isSupported()) {
+        new Notification({
+          title: 'Workspace',
+          body: 'Application was minimized to tray. Click the tray icon to restore.',
+          silent: true
+        }).show()
+      }
     }
+  })
+
+  ipcMain.handle('window-quit', () => {
+    app.quit()
   })
 
   // Update functionality
@@ -246,6 +324,9 @@ app.whenReady().then(() => {
   const browserWindow = createWindow();
   browserWindow.setMenu(null);
 
+  // Create system tray
+  createTray()
+
   // Initialize update service
   updateService.setMainWindow(browserWindow)
 
@@ -255,7 +336,12 @@ app.whenReady().then(() => {
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
+
+  app.on('before-quit', () => {
+    (app as any).isQuitting = true
+  })
 })
+
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()

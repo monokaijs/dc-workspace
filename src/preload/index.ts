@@ -12,7 +12,8 @@ const TOKEN_UPDATED = 'TOKEN_UPDATED'
 const api = {
   minimize: () => ipcRenderer.invoke('window-minimize'),
   maximize: () => ipcRenderer.invoke('window-maximize'),
-  close: () => ipcRenderer.invoke('window-close')
+  close: () => ipcRenderer.invoke('window-close'),
+  quit: () => ipcRenderer.invoke('window-quit')
 }
 
 // Data persistence APIs

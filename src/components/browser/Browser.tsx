@@ -19,6 +19,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger
+} from '@/components/ui/context-menu'
 import {useKeyboardShortcuts} from '@/hooks/useKeyboardShortcuts'
 import {PushNotificationService} from '@/services/pushNotificationService'
 
@@ -114,6 +120,12 @@ const WindowControls: React.FC = () => {
     }
   }
 
+  const handleQuit = () => {
+    if ((window as any).electronAPI) {
+      (window as any).electronAPI.quit()
+    }
+  }
+
   return (
     <div className="flex items-center">
       <Button
@@ -132,14 +144,26 @@ const WindowControls: React.FC = () => {
       >
         <Square className="h-3 w-3"/>
       </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={handleClose}
-        className="h-8 w-8 p-0 hover:bg-red-500/20 text-muted-foreground hover:text-red-600"
-      >
-        <X className="h-3 w-3"/>
-      </Button>
+      <ContextMenu>
+        <ContextMenuTrigger>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleClose}
+            className="h-8 w-8 p-0 hover:bg-red-500/20 text-muted-foreground hover:text-red-600"
+          >
+            <X className="h-3 w-3"/>
+          </Button>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem onClick={handleClose}>
+            Hide to Tray
+          </ContextMenuItem>
+          <ContextMenuItem onClick={handleQuit}>
+            Quit Application
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
     </div>
   )
 }
