@@ -364,6 +364,9 @@ export const SettingsPage: React.FC = () => {
                 { value: 'violet', label: 'Violet', hsl: '262.1 83.3% 57.8%' },
                 { value: 'green', label: 'Green', hsl: '142.1 70.6% 45.3%' },
                 { value: 'rose', label: 'Rose', hsl: '347.7 77.2% 50.2%' },
+                { value: 'zinc', label: 'Zinc', hsl: '240 5.9% 50.4%' },
+                { value: 'orange', label: 'Orange', hsl: '24.6 95% 53.1%' },
+                { value: 'yellow', label: 'Yellow', hsl: '47.9 95.8% 53.1%' },
               ].map(p => (
                 <Button
                   key={p.value}
