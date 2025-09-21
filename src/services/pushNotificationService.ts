@@ -1,88 +1,64 @@
 
 /// <reference path="../env.d.ts" />
 
-export interface PushNotificationData {
+export interface CustomNotificationData {
   title: string
   body: string
   icon?: string
   data?: any
 }
 
-export class PushNotificationService {
-  private static instance: PushNotificationService
+export class CustomNotificationService {
+  private static instance: CustomNotificationService
   private isInitialized = false
-  private onNotificationCallback?: (data: PushNotificationData) => void
-  private fcmToken?: string
+  private onNotificationCallback?: (data: CustomNotificationData) => void
   private cleanupFunctions: (() => void)[] = []
 
-  static getInstance(): PushNotificationService {
-    if (!PushNotificationService.instance) {
-      PushNotificationService.instance = new PushNotificationService()
+  static getInstance(): CustomNotificationService {
+    if (!CustomNotificationService.instance) {
+      CustomNotificationService.instance = new CustomNotificationService()
     }
-    return PushNotificationService.instance
+    return CustomNotificationService.instance
   }
 
-  async initialize(onNotification?: (data: PushNotificationData) => void, senderId?: string): Promise<void> {
+  async initialize(onNotification?: (data: CustomNotificationData) => void): Promise<void> {
     if (this.isInitialized) {
-      console.log('Push notification service already initialized')
+      console.log('Custom notification service already initialized')
       return
     }
 
     this.onNotificationCallback = onNotification
 
     try {
-      if (!(window as any).pushNotificationAPI) {
-        throw new Error('Push notification API not available')
+      if (!(window as any).customNotificationAPI) {
+        throw new Error('Custom notification API not available')
       }
 
-      // Set up event listeners with cleanup functions
-      const serviceStartedCleanup = (window as any).pushNotificationAPI.onServiceStarted((token) => {
-        this.fcmToken = token
-        console.log('Push notification service started with token:', token)
-      })
-
-      const serviceErrorCleanup = (window as any).pushNotificationAPI.onServiceError((error) => {
-        console.error('Push notification service error:', error)
-      })
-
-      const tokenUpdatedCleanup = (window as any).pushNotificationAPI.onTokenUpdated((token) => {
-        this.fcmToken = token
-        console.log('FCM token updated:', token)
-      })
-
-      const notificationReceivedCleanup = (window as any).pushNotificationAPI.onNotificationReceived((notification) => {
-        console.log('Push notification received in service:', notification)
+      // Set up event listener for notifications
+      const notificationReceivedCleanup = (window as any).customNotificationAPI.onNotificationReceived((notification) => {
+        console.log('Custom notification received in service:', notification)
         this.handleNotification(notification)
       })
 
-      // Store cleanup functions
-      this.cleanupFunctions = [
-        serviceStartedCleanup,
-        serviceErrorCleanup,
-        tokenUpdatedCleanup,
-        notificationReceivedCleanup
-      ].filter(Boolean)
-
-      // Start the service with a default sender ID (you can replace this with your Firebase sender ID)
-      const defaultSenderId = senderId || '1234567890'; // Replace with your actual sender ID
-      (window as any).pushNotificationAPI.startService(defaultSenderId)
+      // Store cleanup function
+      this.cleanupFunctions = [notificationReceivedCleanup].filter(Boolean)
 
       this.isInitialized = true
-      console.log('Push notification service initialized successfully')
+      console.log('Custom notification service initialized successfully')
     } catch (error) {
-      console.error('Failed to initialize push notification service:', error)
+      console.error('Failed to initialize custom notification service:', error)
       throw error
     }
   }
 
   private handleNotification(data: any): void {
-    console.log('Handling notification:', data)
+    console.log('Handling custom notification:', data)
 
     // Transform the notification data to match our interface
-    const notificationData: PushNotificationData = {
-      title: data.title || data.notification?.title || 'New Notification',
-      body: data.body || data.notification?.body || '',
-      icon: data.icon || data.notification?.icon,
+    const notificationData: CustomNotificationData = {
+      title: data.title || 'New Notification',
+      body: data.body || '',
+      icon: data.icon,
       data: data.data || data
     }
 
@@ -91,18 +67,8 @@ export class PushNotificationService {
       this.onNotificationCallback(notificationData)
     }
 
-    // Show system notification if permission is granted
-    if (Notification.permission === 'granted') {
-      const systemNotification = new Notification(notificationData.title, {
-        body: notificationData.body,
-        icon: notificationData.icon || 'https://www.google.com/s2/favicons?sz=64&domain_url=https://google.com'
-      })
-
-      // Auto-close after 5 seconds
-      setTimeout(() => {
-        systemNotification.close()
-      }, 5000)
-    }
+    // Note: We don't show system notifications here since we want all notifications
+    // to go through our app's notification system instead
   }
 
   async requestPermission(): Promise<NotificationPermission> {
@@ -130,17 +96,18 @@ export class PushNotificationService {
   }
 
   async sendTestNotification(): Promise<void> {
-    const testData: PushNotificationData = {
+    const testData: CustomNotificationData = {
       title: 'Test Notification',
       body: 'This is a test notification from your browser app.',
       icon: 'https://www.google.com/s2/favicons?sz=64&domain_url=https://google.com'
     }
 
-    this.handleNotification(testData)
-  }
-
-  getFCMToken(): string | undefined {
-    return this.fcmToken
+    // Send through the custom notification API
+    if ((window as any).customNotificationAPI) {
+      await (window as any).customNotificationAPI.sendNotification(testData)
+    } else {
+      this.handleNotification(testData)
+    }
   }
 
   destroy(): void {
@@ -154,14 +121,13 @@ export class PushNotificationService {
       this.cleanupFunctions = []
 
       // Fallback to remove all listeners
-      if ((window as any).pushNotificationAPI) {
-        (window as any).pushNotificationAPI.removeAllListeners()
+      if ((window as any).customNotificationAPI) {
+        (window as any).customNotificationAPI.removeAllListeners()
       }
 
       this.isInitialized = false
       this.onNotificationCallback = undefined
-      this.fcmToken = undefined
-      console.log('Push notification service destroyed')
+      console.log('Custom notification service destroyed')
     }
   }
 }

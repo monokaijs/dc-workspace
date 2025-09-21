@@ -4,6 +4,7 @@ import {Card} from '@/components/ui/card'
 import {Button} from '@/components/ui/button'
 import {AlertCircle, Globe} from 'lucide-react'
 
+
 interface TabWebViewProps {
   tab: any
   isActive: boolean
@@ -70,6 +71,8 @@ const TabWebView: React.FC<TabWebViewProps> = React.memo(({
       onNavigate(tab.id, event.url)
     }
 
+
+
     // Add event listeners
     webview.addEventListener('did-start-loading', handleLoadStart)
     webview.addEventListener('did-stop-loading', handleLoadStop)
@@ -79,6 +82,7 @@ const TabWebView: React.FC<TabWebViewProps> = React.memo(({
     webview.addEventListener('did-navigate', handleDidNavigate)
     webview.addEventListener('new-window', handleNewWindow)
 
+
     return () => {
       webview.removeEventListener('did-start-loading', handleLoadStart)
       webview.removeEventListener('did-stop-loading', handleLoadStop)
@@ -87,6 +91,7 @@ const TabWebView: React.FC<TabWebViewProps> = React.memo(({
       webview.removeEventListener('did-fail-load', handleDidFailLoad)
       webview.removeEventListener('did-navigate', handleDidNavigate)
       webview.removeEventListener('new-window', handleNewWindow)
+
     }
   }, [tab?.id, onUpdateLoading, onUpdateTitle, onUpdateFavicon])
 
@@ -176,6 +181,7 @@ const TabWebView: React.FC<TabWebViewProps> = React.memo(({
         className={`w-full h-full bg-white ${tab.url === 'about:blank' ? 'hidden' : ''}`}
         allowpopups={true}
         webpreferences="contextIsolation=true, nodeIntegration=false, webSecurity=false"
+
         useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:143.0) Gecko/20100101 Firefox/143.0"
       />
 

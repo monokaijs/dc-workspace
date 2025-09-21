@@ -16,6 +16,7 @@ win:
   executableName: Workspace
   signAndEditExecutable: true
   publisherName: "MonokaiJs"
+  artifactName: ${productName}-Setup-${version}.${ext}
   target:
     - target: nsis
       arch:

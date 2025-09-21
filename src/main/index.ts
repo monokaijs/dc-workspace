@@ -2,7 +2,6 @@ import {app, BrowserWindow, ipcMain, shell, Tray, Menu, nativeImage, Notificatio
 import * as path from 'path'
 import {join} from 'path'
 import {electronApp, is, optimizer} from '@electron-toolkit/utils'
-import {setup as setupPushReceiver} from 'electron-push-receiver'
 import {updateService} from '../services/updateService'
 import * as fs from 'fs'
 import * as os from 'os'
@@ -127,12 +126,12 @@ function createWindow(): BrowserWindow {
     }
   })
 
-  setupPushReceiver(mainWindow.webContents)
-  console.log('Push receiver setup completed for main window')
+
 
   mainWindow.on('ready-to-show', () => {
     mainWindow?.show()
   })
+
 
   mainWindow.on('close', (event) => {
     if (!(app as any).isQuitting) {
@@ -220,6 +219,8 @@ app.whenReady().then(() => {
     return DATA_DIR
   })
 
+
+
   // Auto-start functionality
   ipcMain.handle('auto-start:get-status', () => {
     try {
@@ -302,6 +303,10 @@ app.whenReady().then(() => {
   // Update functionality
   ipcMain.handle('update:check', async (_, manual = false) => {
     return await updateService.checkForUpdates(manual)
+  })
+
+  ipcMain.handle('update:force-check', async () => {
+    return await updateService.forceUpdateCheck()
   })
 
   ipcMain.handle('update:download', async () => {

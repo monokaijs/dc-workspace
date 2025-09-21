@@ -34,7 +34,18 @@ export class UpdateService {
     // Set update server for development
     if (is.dev) {
       autoUpdater.updateConfigPath = 'dev-app-update.yml'
+      // Force update checks in development for testing
+      autoUpdater.forceDevUpdateConfig = true
     }
+
+    // Add more detailed logging
+    console.log('🔧 Auto-updater configuration:', {
+      autoDownload: autoUpdater.autoDownload,
+      autoInstallOnAppQuit: autoUpdater.autoInstallOnAppQuit,
+      isDev: is.dev,
+      updateConfigPath: (autoUpdater as any).updateConfigPath,
+      forceDevUpdateConfig: (autoUpdater as any).forceDevUpdateConfig
+    })
 
     // Event handlers
     autoUpdater.on('checking-for-update', () => {
@@ -57,8 +68,17 @@ export class UpdateService {
     })
 
     autoUpdater.on('error', (err) => {
-      console.error('Update error:', err)
-      this.sendToRenderer('update-error', err.message)
+      console.error('❌ Auto-updater error:', err)
+      console.error('❌ Error details:', {
+        message: err.message,
+        stack: err.stack,
+        name: err.name,
+        code: (err as any).code,
+        errno: (err as any).errno,
+        syscall: (err as any).syscall,
+        path: (err as any).path
+      })
+      this.sendToRenderer('update-error', `Update error: ${err.message}`)
     })
 
     autoUpdater.on('download-progress', (progressObj) => {
@@ -88,21 +108,37 @@ export class UpdateService {
 
   async checkForUpdates(manual = false): Promise<boolean> {
     if (this.updateCheckInProgress) {
+      console.log('🔄 Update check already in progress, skipping...')
       return false
     }
 
     if (!manual && !this.autoCheckEnabled) {
+      console.log('🔄 Auto-check disabled, skipping...')
       return false
     }
 
     try {
+      console.log('🔄 Starting update check...', { manual, autoCheckEnabled: this.autoCheckEnabled })
+      console.log('🔄 Update server config:', {
+        provider: 'github',
+        owner: 'monokaijs',
+        repo: 'dc-workspace',
+        currentVersion: this.getCurrentVersion()
+      })
+
       this.updateCheckInProgress = true
       const result = await autoUpdater.checkForUpdates()
+      console.log('✅ Update check completed:', result)
       return result !== null
     } catch (error) {
-      console.error('Error checking for updates:', error)
+      console.error('❌ Error checking for updates:', error)
+      console.error('❌ Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        name: error instanceof Error ? error.name : undefined
+      })
       if (manual) {
-        this.sendToRenderer('update-error', 'Failed to check for updates')
+        this.sendToRenderer('update-error', `Failed to check for updates: ${error instanceof Error ? error.message : 'Unknown error'}`)
       }
       return false
     } finally {
@@ -112,21 +148,42 @@ export class UpdateService {
 
   async downloadUpdate(): Promise<boolean> {
     try {
-      await autoUpdater.downloadUpdate()
+      console.log('🔄 Starting update download...')
+      console.log('🔄 Auto-updater config:', {
+        autoDownload: autoUpdater.autoDownload,
+        autoInstallOnAppQuit: autoUpdater.autoInstallOnAppQuit,
+        currentVersion: this.getCurrentVersion(),
+        updateConfigPath: (autoUpdater as any).updateConfigPath
+      })
+
+      const result = await autoUpdater.downloadUpdate()
+      console.log('✅ Update download completed:', result)
       return true
     } catch (error) {
-      console.error('Error downloading update:', error)
-      this.sendToRenderer('update-error', 'Failed to download update')
+      console.error('❌ Error downloading update:', error)
+      console.error('❌ Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        name: error instanceof Error ? error.name : undefined
+      })
+      this.sendToRenderer('update-error', `Failed to download update: ${error instanceof Error ? error.message : 'Unknown error'}`)
       return false
     }
   }
 
   async installUpdate(): Promise<void> {
     try {
+      console.log('🔄 Starting update installation...')
       autoUpdater.quitAndInstall(false, true)
+      console.log('✅ Update installation initiated')
     } catch (error) {
-      console.error('Error installing update:', error)
-      this.sendToRenderer('update-error', 'Failed to install update')
+      console.error('❌ Error installing update:', error)
+      console.error('❌ Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        name: error instanceof Error ? error.name : undefined
+      })
+      this.sendToRenderer('update-error', `Failed to install update: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 
@@ -161,6 +218,32 @@ export class UpdateService {
 
   getCurrentVersion(): string {
     return app.getVersion()
+  }
+
+  // Force update check for testing (bypasses dev mode restrictions)
+  async forceUpdateCheck(): Promise<boolean> {
+    try {
+      console.log('🔄 Forcing update check (bypassing dev mode restrictions)...')
+
+      // Temporarily override dev mode check
+      const originalForceDevUpdateConfig = (autoUpdater as any).forceDevUpdateConfig
+      ;(autoUpdater as any).forceDevUpdateConfig = true
+
+      this.updateCheckInProgress = true
+      const result = await autoUpdater.checkForUpdates()
+      console.log('✅ Forced update check completed:', result)
+
+      // Restore original setting
+      ;(autoUpdater as any).forceDevUpdateConfig = originalForceDevUpdateConfig
+
+      return result !== null
+    } catch (error) {
+      console.error('❌ Error in forced update check:', error)
+      this.sendToRenderer('update-error', `Forced update check failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      return false
+    } finally {
+      this.updateCheckInProgress = false
+    }
   }
 }
 

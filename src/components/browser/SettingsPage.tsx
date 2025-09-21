@@ -30,7 +30,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Plus, Trash2, Edit, Bell, TestTube, Download, RefreshCw } from 'lucide-react'
 import { getFaviconUrl } from '@/utils/url'
-import { PushNotificationService } from '@/services/pushNotificationService'
+import { CustomNotificationService } from '@/services/pushNotificationService'
 
 interface AddAppDialogProps {
   onAddApp: (app: Omit<App, 'id'>) => void
@@ -188,6 +188,15 @@ export const SettingsPage: React.FC = () => {
     }
   }
 
+  const handleForceCheckForUpdates = async () => {
+    try {
+      console.log('🔄 Forcing update check for testing...')
+      await (window as any).updateAPI.forceCheckForUpdates()
+    } catch (error) {
+      console.error('Failed to force check for updates:', error)
+    }
+  }
+
   useEffect(() => {
     const loadAutoStartStatus = async () => {
       try {
@@ -223,8 +232,8 @@ export const SettingsPage: React.FC = () => {
 
   const handleRequestPermission = async () => {
     try {
-      const pushService = PushNotificationService.getInstance()
-      const permission = await pushService.requestPermission()
+      const customService = CustomNotificationService.getInstance()
+      const permission = await customService.requestPermission()
 
       if (permission === 'granted') {
         addNotification({
@@ -245,27 +254,12 @@ export const SettingsPage: React.FC = () => {
   }
 
   const handleShowFCMToken = () => {
-    const pushService = PushNotificationService.getInstance()
-    const token = pushService.getFCMToken()
-
-    if (token) {
-      addNotification({
-        title: 'FCM Token',
-        body: `Your FCM token: ${token.substring(0, 50)}...`,
-        icon: 'https://www.google.com/s2/favicons?sz=64&domain_url=https://firebase.google.com'
-      })
-
-      // Copy to clipboard
-      navigator.clipboard.writeText(token).then(() => {
-        console.log('FCM token copied to clipboard')
-      })
-    } else {
-      addNotification({
-        title: 'No FCM Token',
-        body: 'FCM token is not available. Make sure the push notification service is initialized.',
-        icon: 'https://www.google.com/s2/favicons?sz=64&domain_url=https://firebase.google.com'
-      })
-    }
+    // Custom notification service doesn't use FCM tokens
+    addNotification({
+      title: 'Custom Notification Service',
+      body: 'This app now uses a custom notification system that intercepts all webview notifications.',
+      icon: 'https://www.google.com/s2/favicons?sz=64&domain_url=https://google.com'
+    })
   }
 
   const handleEditApp = (app: App) => {
@@ -380,10 +374,16 @@ export const SettingsPage: React.FC = () => {
                   {currentVersion || 'Loading...'}
                 </p>
               </div>
-              <Button onClick={handleCheckForUpdates} variant="outline" size="sm">
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Check for Updates
-              </Button>
+              <div className="flex gap-2">
+                <Button onClick={handleCheckForUpdates} variant="outline" size="sm">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Check for Updates
+                </Button>
+                <Button onClick={handleForceCheckForUpdates} variant="outline" size="sm">
+                  <TestTube className="h-4 w-4 mr-2" />
+                  Force Check (Dev)
+                </Button>
+              </div>
             </div>
 
             <Separator />

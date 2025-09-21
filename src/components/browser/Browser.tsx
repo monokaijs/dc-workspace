@@ -1,6 +1,6 @@
-import React, {useEffect, useState} from 'react'
+import React, {useState} from 'react'
 import {BrowserProvider, useBrowser} from '@/contexts/BrowserContext'
-import {NotificationProvider, useNotifications} from '@/contexts/NotificationContext'
+import {NotificationProvider} from '@/contexts/NotificationContext'
 import {TabBar} from './TabBar'
 import {NavigationBar} from './NavigationBar'
 import {WebView} from './WebView'
@@ -26,7 +26,7 @@ import {
   ContextMenuTrigger
 } from '@/components/ui/context-menu'
 import {useKeyboardShortcuts} from '@/hooks/useKeyboardShortcuts'
-import {PushNotificationService} from '@/services/pushNotificationService'
+
 
 interface BrowserMenuProps {
   onOpenSettings: () => void
@@ -171,50 +171,13 @@ const WindowControls: React.FC = () => {
 const BrowserContent: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false)
   const {state} = useBrowser()
-  const {addNotification} = useNotifications()
+
   const activeTab = state.tabs.find(tab => tab.id === state.activeTabId)
 
   // Enable keyboard shortcuts
   useKeyboardShortcuts()
 
-  // Initialize push notification service
-  useEffect(() => {
-    const initNotifications = async () => {
-      try {
-        console.log('Initializing push notification service...')
-        const pushService = PushNotificationService.getInstance()
 
-        // Request notification permission first
-        const permission = await pushService.requestPermission()
-        console.log('Notification permission:', permission)
-
-        // Initialize the service with callback to add notifications to history
-        await pushService.initialize((data) => {
-          console.log('Adding notification to history:', data)
-          addNotification({
-            title: data.title,
-            body: data.body,
-            icon: data.icon,
-            data: data.data
-          })
-        }, '1234567890') // Use your actual Firebase sender ID here
-
-        console.log('Push notification service initialized successfully')
-      } catch (error) {
-        console.error('Failed to initialize notification service:', error)
-      }
-    }
-
-    // Add a small delay to ensure the window is fully loaded
-    const timer = setTimeout(initNotifications, 1000)
-
-    // Cleanup on unmount
-    return () => {
-      clearTimeout(timer)
-      const pushService = PushNotificationService.getInstance()
-      pushService.destroy()
-    }
-  }, [addNotification])
 
   if (showSettings) {
     return (

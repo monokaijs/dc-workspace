@@ -18,6 +18,7 @@ declare global {
       writeTabs: (data: any) => Promise<boolean>
       clearAll: () => Promise<boolean>
       getDataDir: () => Promise<string>
+
     }
     autoStartAPI: {
       getStatus: () => Promise<boolean>
@@ -25,6 +26,7 @@ declare global {
     }
     updateAPI: {
       checkForUpdates: (manual?: boolean) => Promise<boolean>
+      forceCheckForUpdates: () => Promise<boolean>
       downloadUpdate: () => Promise<boolean>
       installUpdate: () => Promise<void>
       getCurrentVersion: () => Promise<string>
@@ -36,14 +38,7 @@ declare global {
       onDownloadProgress: (callback: (progress: any) => void) => () => void
       onUpdateDownloaded: (callback: (info: any) => void) => () => void
     }
-    pushNotificationAPI: {
-      startService: (senderId: string) => void
-      onServiceStarted: (callback: (token: string) => void) => (() => void) | void
-      onServiceError: (callback: (error: any) => void) => (() => void) | void
-      onNotificationReceived: (callback: (notification: any) => void) => (() => void) | void
-      onTokenUpdated: (callback: (token: string) => void) => (() => void) | void
-      removeAllListeners: () => void
-    }
+
     electron: {
       process: {
         versions: {
@@ -63,6 +58,7 @@ declare global {
         src?: string
         allowpopups?: string
         webpreferences?: string
+
         useragent?: string
         ref?: React.Ref<Electron.WebviewTag>
       }
