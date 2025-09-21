@@ -31,6 +31,18 @@ export class UpdateService {
     autoUpdater.autoDownload = false
     autoUpdater.autoInstallOnAppQuit = true
 
+    // Allow unsigned updates for development/testing
+    // This is necessary when builds aren't properly code-signed
+    autoUpdater.allowDowngrade = true
+    autoUpdater.allowPrerelease = true
+
+    // Disable signature verification for unsigned builds in development
+    // WARNING: Only use this for development/testing, not production
+    if (is.dev || process.env.NODE_ENV === 'development') {
+      process.env.ELECTRON_UPDATER_ALLOW_UNVERIFIED = 'true'
+      console.log('🔧 Signature verification disabled for development builds')
+    }
+
     // Set update server for development
     if (is.dev) {
       autoUpdater.updateConfigPath = 'dev-app-update.yml'
@@ -43,6 +55,9 @@ export class UpdateService {
     console.log('🔧 Auto-updater configuration:', {
       autoDownload: autoUpdater.autoDownload,
       autoInstallOnAppQuit: autoUpdater.autoInstallOnAppQuit,
+      allowDowngrade: autoUpdater.allowDowngrade,
+      allowPrerelease: autoUpdater.allowPrerelease,
+      allowUnverified: process.env.ELECTRON_UPDATER_ALLOW_UNVERIFIED === 'true',
       isDev: is.dev,
       autoUpdatesDisabledInDev: is.dev,
       updateConfigPath: (autoUpdater as any).updateConfigPath,
@@ -80,7 +95,15 @@ export class UpdateService {
         syscall: (err as any).syscall,
         path: (err as any).path
       })
-      this.sendToRenderer('update-error', `Update error: ${err.message}`)
+
+      // Check if this is a signature verification error
+      if (err.message.includes('not signed') || err.message.includes('not digitally signed')) {
+        console.error('❌ Signature verification failed - this is expected for unsigned development builds')
+        console.error('❌ To fix this: Either sign your builds or use ELECTRON_UPDATER_ALLOW_UNVERIFIED=true')
+        this.sendToRenderer('update-error', 'Update failed: Application signature verification failed. This is expected for unsigned development builds.')
+      } else {
+        this.sendToRenderer('update-error', `Update error: ${err.message}`)
+      }
     })
 
     autoUpdater.on('download-progress', (progressObj) => {

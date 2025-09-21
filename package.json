@@ -18,6 +18,7 @@
     "postinstall": "electron-builder install-app-deps",
     "build:unpack": "npm run build && npx electron-builder --dir",
     "build:win": "npm run build && npx electron-builder --win --publish=never",
+    "build:win:unsigned": "npm run build && npx electron-builder --win --publish=never --config.win.signAndEditExecutable=false",
     "build:mac": "npm run build && npx electron-builder --mac --publish=never",
     "build:linux": "npm run build && npx electron-builder --linux --publish=never"
   },
