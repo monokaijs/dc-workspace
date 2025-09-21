@@ -11,6 +11,7 @@ import {NotificationButton} from '@/components/notifications/NotificationButton'
 import {UpdateNotification} from '../UpdateNotification'
 import {Button} from '@/components/ui/button'
 import {Menu, Minus, Navigation, Settings, Square, X, Database, Code} from 'lucide-react'
+import { PanelGroup, Panel, PanelResizeHandle } from 'react-resizable-panels'
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -170,7 +171,12 @@ const WindowControls: React.FC = () => {
 
 const BrowserContent: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false)
-  const {state} = useBrowser()
+  const { state, createTab, setPanelUrl } = useBrowser()
+
+  useEffect(() => {
+    const palette = state.settings.colorPalette || 'slate'
+    document.documentElement.setAttribute('data-theme', palette)
+  }, [state.settings.colorPalette])
 
   const activeTab = state.tabs.find(tab => tab.id === state.activeTabId)
 
@@ -190,6 +196,23 @@ const BrowserContent: React.FC = () => {
 
     updateTitle()
   }, [activeTab?.title, activeTab?.id])
+
+  useEffect(() => {
+    const ipc = (window as any).electron?.ipcRenderer
+    if (!ipc) return
+    const onCreateTab = (_e: any, payload: { url: string }) => {
+      if (payload?.url) createTab(payload.url)
+    }
+    const onSendToPanel = (_e: any, payload: { url: string | null }) => {
+      setPanelUrl(payload?.url ?? null)
+    }
+    ipc.on('host:create-tab', onCreateTab)
+    ipc.on('host:send-to-panel', onSendToPanel)
+    return () => {
+      ipc.removeListener('host:create-tab', onCreateTab)
+      ipc.removeListener('host:send-to-panel', onSendToPanel)
+    }
+  }, [createTab, setPanelUrl])
 
 
 
@@ -246,8 +269,27 @@ const BrowserContent: React.FC = () => {
       </div>
 
       <TabBar/>
-      {activeTab?.showNavigationBar && <NavigationBar/>}
-      <WebView/>
+      <PanelGroup direction="horizontal" className="flex-1">
+        <Panel defaultSize={70} minSize={30} className="flex flex-col overflow-hidden">
+          {activeTab?.showNavigationBar && <NavigationBar/>}
+          <div className="flex-1 flex overflow-hidden">
+            <WebView/>
+          </div>
+        </Panel>
+        {state.panelUrl ? (
+          <>
+            <PanelResizeHandle className="w-1 bg-border cursor-col-resize" />
+            <Panel defaultSize={30} minSize={20} maxSize={70} className="overflow-hidden border-l bg-background">
+              <webview
+                src={state.panelUrl || undefined}
+                allowpopups={true}
+                webpreferences="contextIsolation=true, nodeIntegration=false, webSecurity=false"
+                className="w-full h-full bg-white"
+              />
+            </Panel>
+          </>
+        ) : null}
+      </PanelGroup>
       <UpdateNotification/>
     </div>
   )

@@ -1,4 +1,4 @@
-import {app, BrowserWindow, ipcMain, shell, Tray, Menu, nativeImage, Notification, session} from 'electron'
+import {app, BrowserWindow, ipcMain, shell, Tray, Menu, nativeImage, Notification, session, clipboard} from 'electron'
 import * as path from 'path'
 import {join} from 'path'
 import { pathToFileURL } from 'url'
@@ -181,6 +181,25 @@ function createWindow(): BrowserWindow {
     webPreferences.contextIsolation = true
     // keep your current security posture
     if (webPreferences.webSecurity === undefined) webPreferences.webSecurity = false
+  })
+
+  // Link context menu for webviews
+  mainWindow.webContents.on('did-attach-webview', (_event, wc) => {
+    wc.on('context-menu', (_e, params: any) => {
+      const link: string | undefined = params?.linkURL
+      if (!link) return
+      const x = params?.x
+      const y = params?.y
+      const template = [
+        { label: 'Send to Panel', click: () => mainWindow?.webContents.send('host:send-to-panel', { url: link }) },
+        { label: 'Copy Link', click: () => clipboard.writeText(link) },
+        { type: 'separator' },
+        { label: 'Open in New Tab', click: () => mainWindow?.webContents.send('host:create-tab', { url: link }) },
+        { label: 'Open in System Browser', click: () => shell.openExternal(link) }
+      ] as Electron.MenuItemConstructorOptions[]
+      const menu = Menu.buildFromTemplate(template)
+      menu.popup({ window: mainWindow!, x, y })
+    })
   })
 
 

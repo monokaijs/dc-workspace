@@ -133,13 +133,14 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         }).catch(() => {})
       }
     } catch {}
+
+    let cleanup: (() => void) | undefined
     if (ipc?.on) {
       const handler = (_: any, value: boolean) => setSilentState(!!value)
       ipc.on('notification:silent', handler)
-      return () => {
-        try { ipc.removeAllListeners?.('notification:silent') } catch {}
-      }
+      cleanup = () => { try { ipc.removeAllListeners?.('notification:silent') } catch {} }
     }
+    return cleanup
   }, [])
 
   useEffect(() => {

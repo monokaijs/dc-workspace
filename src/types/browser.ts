@@ -36,6 +36,7 @@ export interface BrowserSettings {
   showAppsInNewTab: boolean
   startWithSystem: boolean
   autoCheckUpdates: boolean
+  colorPalette?: string
   apps: App[]
 }
 
@@ -44,6 +45,7 @@ export interface BrowserState {
   activeTabId: string | null
   globalHistory: HistoryEntry[]
   settings: BrowserSettings
+  panelUrl?: string | null
 }
 
 export interface NavigationState {
@@ -87,4 +89,6 @@ export type BrowserAction =
   | { type: 'ADD_APP'; payload: { app: App } }
   | { type: 'REMOVE_APP'; payload: { appId: string } }
   | { type: 'UPDATE_APP'; payload: { appId: string; updates: Partial<App> } }
+  | { type: 'SET_PANEL_URL'; payload: { url: string | null } }
+  | { type: 'SEND_TAB_TO_PANEL'; payload: { tabId: string } }
   | { type: 'LOAD_STATE'; payload: { state: BrowserState } }

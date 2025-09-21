@@ -28,8 +28,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger
 } from '@/components/ui/alert-dialog'
-import { Plus, Trash2, Edit, TestTube, Download, RefreshCw } from 'lucide-react'
+import { Plus, Trash2, Edit, TestTube, Download, RefreshCw, Palette } from 'lucide-react'
 import { getFaviconUrl } from '@/utils/url'
+import { useTheme } from '@/components/theme-provider'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 
 interface AddAppDialogProps {
@@ -137,6 +139,7 @@ export const SettingsPage: React.FC = () => {
   const { state, updateSettings, addApp, removeApp, updateApp } = useBrowser()
 
   const [editingApp, setEditingApp] = useState<App | null>(null)
+  const { theme, setTheme } = useTheme()
   const [editFormData, setEditFormData] = useState({
     name: '',
     url: '',
@@ -320,6 +323,63 @@ export const SettingsPage: React.FC = () => {
                 checked={autoStartEnabled}
                 onCheckedChange={handleAutoStartChange}
               />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Appearance / Theme */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Palette className="h-5 w-5" />
+              Appearance
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label>Theme mode</Label>
+              <p className="text-sm text-muted-foreground">Choose light, dark, or follow system</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <Select value={theme} onValueChange={(v) => setTheme(v as any)}>
+                <SelectTrigger className="w-[180px]"><SelectValue placeholder="Theme" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="system">System</SelectItem>
+                  <SelectItem value="light">Light</SelectItem>
+                  <SelectItem value="dark">Dark</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Separator />
+
+            <div>
+              <Label>Color palette</Label>
+              <p className="text-sm text-muted-foreground">Choose an accent color for the UI</p>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+              {[
+                { value: 'slate', label: 'Slate', hsl: '222.2 47.4% 11.2%' },
+                { value: 'blue', label: 'Blue', hsl: '221.2 83.2% 53.3%' },
+                { value: 'violet', label: 'Violet', hsl: '262.1 83.3% 57.8%' },
+                { value: 'green', label: 'Green', hsl: '142.1 70.6% 45.3%' },
+                { value: 'rose', label: 'Rose', hsl: '347.7 77.2% 50.2%' },
+              ].map(p => (
+                <Button
+                  key={p.value}
+                  type="button"
+                  variant={state.settings.colorPalette === p.value ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => handleSettingChange('colorPalette', p.value)}
+                  className="justify-start"
+                >
+                  <span
+                    className="w-3 h-3 rounded-full mr-2"
+                    style={{ backgroundColor: `hsl(${p.hsl})` }}
+                  />
+                  {p.label}
+                </Button>
+              ))}
             </div>
           </CardContent>
         </Card>

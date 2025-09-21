@@ -30,6 +30,8 @@ interface BrowserContextType {
   removeApp: (appId: string) => void
   updateApp: (appId: string, updates: Partial<App>) => void
   updateSettings: (settings: Partial<BrowserSettings>) => void
+  setPanelUrl: (url: string | null) => void
+  sendTabToPanel: (tabId: string) => void
 }
 
 const generateId = () => Math.random().toString(36).substr(2, 9)
@@ -65,6 +67,7 @@ const defaultSettings: BrowserSettings = {
   showAppsInNewTab: true,
   startWithSystem: false,
   autoCheckUpdates: true,
+  colorPalette: 'slate',
   apps: defaultApps
 }
 
@@ -73,7 +76,8 @@ const initialState: BrowserState = {
   tabs: [initialTab],
   activeTabId: initialTab.id,
   globalHistory: [],
-  settings: defaultSettings
+  settings: defaultSettings,
+  panelUrl: null
 }
 
 const browserReducer = (state: BrowserState, action: BrowserAction): BrowserState => {
@@ -421,6 +425,40 @@ const browserReducer = (state: BrowserState, action: BrowserAction): BrowserStat
       }
     }
 
+    case 'SET_PANEL_URL': {
+      return {
+        ...state,
+        panelUrl: action.payload.url || null
+      }
+    }
+
+    case 'SEND_TAB_TO_PANEL': {
+      const { tabId } = action.payload
+      const tabToMove = state.tabs.find(tab => tab.id === tabId)
+      if (!tabToMove) return state
+
+      const remainingTabs = state.tabs.filter(tab => tab.id !== tabId)
+      let newTabs = remainingTabs
+      let newActiveTabId = state.activeTabId
+
+      if (remainingTabs.length === 0) {
+        const newTab = createNewTab()
+        newTabs = [newTab]
+        newActiveTabId = newTab.id
+      } else if (state.activeTabId === tabId) {
+        const closedTabIndex = state.tabs.findIndex(tab => tab.id === tabId)
+        const nextIndex = closedTabIndex > 0 ? closedTabIndex - 1 : 0
+        newActiveTabId = remainingTabs[nextIndex]?.id || remainingTabs[0]?.id
+      }
+
+      return {
+        ...state,
+        tabs: newTabs,
+        activeTabId: newActiveTabId,
+        panelUrl: tabToMove.url
+      }
+    }
+
     case 'LOAD_STATE': {
       return action.payload.state
     }
@@ -580,7 +618,11 @@ export const BrowserProvider: React.FC<BrowserProviderProps> = ({children}) => {
     updateApp: (appId: string, updates: Partial<App>) =>
       dispatch({type: 'UPDATE_APP', payload: {appId, updates}}),
     updateSettings: (settings: Partial<BrowserSettings>) =>
-      dispatch({type: 'UPDATE_SETTINGS', payload: {settings}})
+      dispatch({type: 'UPDATE_SETTINGS', payload: {settings}}),
+    setPanelUrl: (url: string | null) =>
+      dispatch({ type: 'SET_PANEL_URL', payload: { url } }),
+    sendTabToPanel: (tabId: string) =>
+      dispatch({ type: 'SEND_TAB_TO_PANEL', payload: { tabId } })
   }
 
   return (

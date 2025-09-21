@@ -19,7 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Plus, X, RotateCcw, Copy, Pin, PinOff, Files } from 'lucide-react'
+import { Plus, X, RotateCcw, Copy, Pin, PinOff, Files, PanelRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export const TabBar: React.FC = () => {
@@ -32,7 +32,8 @@ export const TabBar: React.FC = () => {
     refreshTab,
     reorderTabs,
     pinTab,
-    unpinTab
+    unpinTab,
+    sendTabToPanel
   } = useBrowser()
   const [draggedTabId, setDraggedTabId] = useState<string | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
@@ -201,6 +202,11 @@ export const TabBar: React.FC = () => {
                   <RotateCcw className="h-4 w-4 mr-2" />
                   Refresh
                 </ContextMenuItem>
+                <ContextMenuItem onClick={() => sendTabToPanel(tab.id)}>
+                  <PanelRight className="h-4 w-4 mr-2" />
+                  Send to Panel
+                </ContextMenuItem>
+
                 <ContextMenuItem
                   onClick={() => navigator.clipboard.writeText(tab.url)}
                 >
