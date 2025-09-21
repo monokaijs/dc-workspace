@@ -1,7 +1,7 @@
 {
   "name": "workspace",
   "version": "1.0.0",
-  "description": "A modern web browser built with Electron, React, and TypeScript",
+  "description": "A modern workspace application built with Electron, React, and TypeScript",
   "main": "./out/main/index.js",
   "author": "monokaijs.com",
   "homepage": "https://electron-vite.org",

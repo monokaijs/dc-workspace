@@ -427,7 +427,7 @@ export const BrowserProvider: React.FC<BrowserProviderProps> = ({children}) => {
           }
         }
       } catch (error) {
-        console.error('Failed to load browser state:', error)
+        console.error('Failed to load workspace state:', error)
       }
     }
 
@@ -439,7 +439,7 @@ export const BrowserProvider: React.FC<BrowserProviderProps> = ({children}) => {
       try {
         await persistenceService.saveBrowserState(state)
       } catch (error) {
-        console.error('Failed to save browser state:', error)
+        console.error('Failed to save workspace state:', error)
       }
     }
 

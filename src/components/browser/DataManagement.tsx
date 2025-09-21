@@ -61,7 +61,7 @@ export const DataManagement: React.FC<DataManagementProps> = ({ trigger }) => {
   const exportData = async () => {
     try {
       const data = {
-        browserState: state,
+        workspaceState: state,
         exportDate: new Date().toISOString(),
         version: '1.0'
       }
@@ -121,7 +121,7 @@ export const DataManagement: React.FC<DataManagementProps> = ({ trigger }) => {
                 Storage Location
               </CardTitle>
               <CardDescription>
-                Your browser data is stored locally on your computer
+                Your workspace data is stored locally on your computer
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -153,7 +153,7 @@ export const DataManagement: React.FC<DataManagementProps> = ({ trigger }) => {
                 Current Data
               </CardTitle>
               <CardDescription>
-                Overview of your stored browser data
+                Overview of your stored workspace data
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -189,7 +189,7 @@ export const DataManagement: React.FC<DataManagementProps> = ({ trigger }) => {
             <CardHeader>
               <CardTitle className="text-lg">Data Actions</CardTitle>
               <CardDescription>
-                Export, import, or clear your browser data
+                Export, import, or clear your workspace data
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -219,7 +219,7 @@ export const DataManagement: React.FC<DataManagementProps> = ({ trigger }) => {
                         Clear All Data
                       </DialogTitle>
                       <DialogDescription>
-                        This will permanently delete all your browser data including:
+                        This will permanently delete all your workspace data including:
                         <ul className="list-disc list-inside mt-2 space-y-1">
                           <li>All open tabs and session data</li>
                           <li>Browsing history</li>

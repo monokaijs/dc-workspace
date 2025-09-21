@@ -244,7 +244,7 @@ export const SettingsPage: React.FC = () => {
       } else {
         addNotification({
           title: 'Permission Denied',
-          body: 'Notification permission was denied. You can enable it in your browser settings.',
+          body: 'Notification permission was denied. You can enable it in your system settings.',
           icon: 'https://www.google.com/s2/favicons?sz=64&domain_url=https://google.com'
         })
       }
@@ -303,7 +303,7 @@ export const SettingsPage: React.FC = () => {
         <div>
           <h1 className="text-3xl font-bold">Settings</h1>
           <p className="text-muted-foreground mt-2">
-            Manage your browser preferences and applications
+            Manage your workspace preferences and applications
           </p>
         </div>
 
@@ -317,7 +317,7 @@ export const SettingsPage: React.FC = () => {
               <div className="space-y-0.5">
                 <Label>Restore tabs on startup</Label>
                 <p className="text-sm text-muted-foreground">
-                  Automatically restore your tabs when the browser starts
+                  Automatically restore your tabs when the workspace starts
                 </p>
               </div>
               <Switch
@@ -347,7 +347,7 @@ export const SettingsPage: React.FC = () => {
               <div className="space-y-0.5">
                 <Label>Start with system</Label>
                 <p className="text-sm text-muted-foreground">
-                  Automatically start the browser when your system starts
+                  Automatically start the workspace when your system starts
                 </p>
               </div>
               <Switch
@@ -416,7 +416,7 @@ export const SettingsPage: React.FC = () => {
               <div className="space-y-0.5">
                 <Label>Notifications</Label>
                 <p className="text-sm text-muted-foreground">
-                  Allow the browser to show desktop notifications
+                  Allow the workspace to show desktop notifications
                 </p>
               </div>
               <Button onClick={handleRequestPermission} variant="outline" size="sm">

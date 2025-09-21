@@ -189,7 +189,7 @@ export class PersistenceService {
         // Clear localStorage after successful migration
         localStorage.removeItem('browserState')
         
-        console.log('Successfully migrated browser state from localStorage to file system')
+        console.log('Successfully migrated workspace state from localStorage to file system')
         return true
       }
       return false

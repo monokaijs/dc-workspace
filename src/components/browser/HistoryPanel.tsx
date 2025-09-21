@@ -125,7 +125,7 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({ trigger }) => {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Clock className="h-5 w-5" />
-            Browsing History
+            Navigation History
           </DialogTitle>
         </DialogHeader>
         
@@ -179,7 +179,7 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({ trigger }) => {
           <ScrollArea className="h-[500px]">
             {groupedHistory.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                {searchQuery ? 'No matching history found' : 'No browsing history'}
+                {searchQuery ? 'No matching history found' : 'No navigation history'}
               </div>
             ) : (
               <div className="space-y-6">
