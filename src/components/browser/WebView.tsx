@@ -4,6 +4,8 @@ import {Card} from '@/components/ui/card'
 import {Globe} from 'lucide-react'
 
 
+import {useNotifications} from '@/contexts/NotificationContext'
+
 interface TabWebViewProps {
   tab: any
   isActive: boolean
@@ -12,6 +14,7 @@ interface TabWebViewProps {
   onUpdateFavicon: (tabId: string, favicon: string) => void
   onNavigate: (tabId: string, url: string) => void
   onUpdateUrl: (tabId: string, url: string) => void
+  onOpenNewTab: (url: string) => void
 }
 
 const TabWebView: React.FC<TabWebViewProps> = React.memo(({
@@ -21,9 +24,12 @@ const TabWebView: React.FC<TabWebViewProps> = React.memo(({
                                                             onUpdateTitle,
                                                             onUpdateFavicon,
                                                             onNavigate,
-                                                            onUpdateUrl
+                                                            onUpdateUrl,
+                                                            onOpenNewTab
                                                           }) => {
   const webviewRef = useRef<Electron.WebviewTag>(null)
+
+  const { addNotification } = useNotifications()
 
   useEffect(() => {
     if (!tab || !webviewRef.current) return
@@ -65,9 +71,10 @@ const TabWebView: React.FC<TabWebViewProps> = React.memo(({
     }
 
     const handleNewWindow = (event: any) => {
-      // Handle new window requests by opening in a new tab
       event.preventDefault()
-      onNavigate(tab.id, event.url)
+      if (event.url) {
+        onOpenNewTab(event.url)
+      }
     }
 
     const handleConsoleMessage = (event: any) => {
@@ -77,7 +84,13 @@ const TabWebView: React.FC<TabWebViewProps> = React.memo(({
 
     const handleIpcMessage = (event: any) => {
       if (event.channel === 'webview:notification') {
-        (window as any).electron?.ipcRenderer?.send('webview:notification', event.args?.[0])
+        const payload = event.args?.[0] || {}
+        const title = payload.title || 'Notification'
+        const body = payload.options?.body || ''
+        const icon = payload.options?.icon
+        const data = { source: payload.source, url: payload.url, options: payload.options }
+        addNotification({ title, body, icon, data })
+        ;(window as any).electron?.ipcRenderer?.send('webview:notification', payload)
       }
     }
 
@@ -107,7 +120,7 @@ const TabWebView: React.FC<TabWebViewProps> = React.memo(({
       webview.removeEventListener('ipc-message', handleIpcMessage)
 
     }
-  }, [tab?.id, onUpdateLoading, onUpdateTitle, onUpdateFavicon])
+  }, [tab?.id, onUpdateLoading, onUpdateTitle, onUpdateFavicon, onUpdateUrl, onNavigate, onOpenNewTab])
 
   // Track the last loaded URL to prevent unnecessary reloads - unique per tab
   const lastLoadedUrlRef = React.useRef<string>('')
@@ -212,7 +225,8 @@ export const WebView: React.FC = () => {
     updateTabFavicon,
     navigateTab,
     updateTabUrl,
-    setTabNavigationBar
+    setTabNavigationBar,
+    createTab
   } = useBrowser()
 
   const activeTab = state.tabs.find(tab => tab.id === state.activeTabId)
@@ -260,6 +274,7 @@ export const WebView: React.FC = () => {
           onUpdateFavicon={updateTabFavicon}
           onNavigate={navigateTab}
           onUpdateUrl={updateTabUrl}
+          onOpenNewTab={(url) => createTab(url)}
         />
       ))}
 

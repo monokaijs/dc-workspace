@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useBrowser } from '@/contexts/BrowserContext'
-import { useNotifications } from '@/contexts/NotificationContext'
+
 import { App } from '@/types/browser'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -28,9 +28,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger
 } from '@/components/ui/alert-dialog'
-import { Plus, Trash2, Edit, Bell, TestTube, Download, RefreshCw } from 'lucide-react'
+import { Plus, Trash2, Edit, TestTube, Download, RefreshCw } from 'lucide-react'
 import { getFaviconUrl } from '@/utils/url'
-import { CustomNotificationService } from '@/services/pushNotificationService'
+
 
 interface AddAppDialogProps {
   onAddApp: (app: Omit<App, 'id'>) => void
@@ -135,7 +135,7 @@ const AddAppDialog: React.FC<AddAppDialogProps> = ({ onAddApp, trigger }) => {
 
 export const SettingsPage: React.FC = () => {
   const { state, updateSettings, addApp, removeApp, updateApp } = useBrowser()
-  const { addNotification, clearAll } = useNotifications()
+
   const [editingApp, setEditingApp] = useState<App | null>(null)
   const [editFormData, setEditFormData] = useState({
     name: '',
@@ -151,13 +151,7 @@ export const SettingsPage: React.FC = () => {
     updateSettings({ [key]: value })
   }
 
-  const handleTestNotification = () => {
-    addNotification({
-      title: 'Test Notification',
-      body: 'This is a test notification from the settings page. The notification system is working correctly!',
-      icon: 'https://www.google.com/s2/favicons?sz=64&domain_url=https://google.com'
-    })
-  }
+
 
   const handleAutoStartChange = async (enabled: boolean) => {
     try {
@@ -230,37 +224,9 @@ export const SettingsPage: React.FC = () => {
     }
   }, [])
 
-  const handleRequestPermission = async () => {
-    try {
-      const customService = CustomNotificationService.getInstance()
-      const permission = await customService.requestPermission()
 
-      if (permission === 'granted') {
-        addNotification({
-          title: 'Permission Granted',
-          body: 'Notification permission has been granted successfully!',
-          icon: 'https://www.google.com/s2/favicons?sz=64&domain_url=https://google.com'
-        })
-      } else {
-        addNotification({
-          title: 'Permission Denied',
-          body: 'Notification permission was denied. You can enable it in your system settings.',
-          icon: 'https://www.google.com/s2/favicons?sz=64&domain_url=https://google.com'
-        })
-      }
-    } catch (error) {
-      console.error('Failed to request notification permission:', error)
-    }
-  }
 
-  const handleShowFCMToken = () => {
-    // Custom notification service doesn't use FCM tokens
-    addNotification({
-      title: 'Custom Notification Service',
-      body: 'This app now uses a custom notification system that intercepts all webview notifications.',
-      icon: 'https://www.google.com/s2/favicons?sz=64&domain_url=https://google.com'
-    })
-  }
+
 
   const handleEditApp = (app: App) => {
     setEditingApp(app)
@@ -403,71 +369,7 @@ export const SettingsPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Notification Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bell className="h-5 w-5" />
-              Notifications
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Notifications</Label>
-                <p className="text-sm text-muted-foreground">
-                  Allow the workspace to show desktop notifications
-                </p>
-              </div>
-              <Button onClick={handleRequestPermission} variant="outline" size="sm">
-                Request Permission
-              </Button>
-            </div>
 
-            <Separator />
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Test Notification</Label>
-                <p className="text-sm text-muted-foreground">
-                  Send a test notification to verify the system is working
-                </p>
-              </div>
-              <Button onClick={handleTestNotification} variant="outline" size="sm">
-                <TestTube className="h-4 w-4 mr-2" />
-                Send Test
-              </Button>
-            </div>
-
-            <Separator />
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>FCM Token</Label>
-                <p className="text-sm text-muted-foreground">
-                  View and copy your Firebase Cloud Messaging token
-                </p>
-              </div>
-              <Button onClick={handleShowFCMToken} variant="outline" size="sm">
-                Show Token
-              </Button>
-            </div>
-
-            <Separator />
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Clear Notification History</Label>
-                <p className="text-sm text-muted-foreground">
-                  Remove all notifications from the history
-                </p>
-              </div>
-              <Button onClick={clearAll} variant="outline" size="sm">
-                Clear All
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Apps Management */}
         <Card>

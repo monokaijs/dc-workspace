@@ -134,15 +134,14 @@ export const TabBar: React.FC = () => {
               <ContextMenuTrigger>
                 <div
                   className={cn(
-                    "flex items-center gap-2 px-4 py-2 border-r cursor-pointer select-none min-w-0 group relative",
+                    "flex items-center gap-2 px-4 h-10 border-b-2 border-r cursor-pointer select-none min-w-0 group relative",
                     "hover:bg-muted/50 transition-colors",
                     tab.id === state.activeTabId
-                      ? "bg-background border-b-2 border-b-primary"
-                      : "bg-muted/20",
+                      ? "bg-background border-b-primary"
+                      : "bg-muted/20 border-transparent",
                     draggedTabId === tab.id && "opacity-50",
                     dragOverIndex === index && "border-l-2 border-l-primary",
-                    tab.pinned ? "w-[60px]" : "w-[200px]",
-                    tab.pinned && "border-r-2 border-r-muted"
+                    tab.pinned ? "w-auto" : "w-[200px]",
                   )}
                   onClick={(e) => handleTabClick(e, tab.id)}
                   onMouseDown={(e) => e.button === 1 && e.preventDefault()}
@@ -152,11 +151,6 @@ export const TabBar: React.FC = () => {
                   onDragOver={(e) => handleDragOver(e, index)}
                   onDrop={(e) => handleDrop(e, index)}
                 >
-
-                  {tab.pinned && (
-                    <Pin className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                  )}
-
                   {tab.isLoading && (
                     <div className="w-3 h-3 border border-primary border-t-transparent rounded-full animate-spin flex-shrink-0" />
                   )}
@@ -184,7 +178,7 @@ export const TabBar: React.FC = () => {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 hover:bg-destructive hover:text-destructive-foreground flex-shrink-0"
+                      className="-mr-2 h-5 w-5 p-0 opacity-0 group-hover:opacity-100 hover:bg-destructive hover:text-destructive-foreground flex-shrink-0"
                       onClick={(e) => handleCloseTab(e, tab.id)}
                     >
                       <X className="h-3 w-3" />

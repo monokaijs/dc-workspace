@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react'
+import React, { createContext, useContext, useReducer, useEffect, useRef, useState } from 'react'
 
 export interface Notification {
   id: string
@@ -78,6 +78,8 @@ interface NotificationContextType {
   markAllAsRead: () => void
   removeNotification: (id: string) => void
   clearAll: () => void
+  silent: boolean
+  setSilent: (value: boolean) => void
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined)
@@ -94,6 +96,9 @@ const STORAGE_KEY = 'browser-notifications'
 
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(notificationReducer, initialState)
+  const [silent, setSilentState] = useState<boolean>(false)
+  const prevCountRef = useRef<number>(0)
+  const ipc = (window as any).electron?.ipcRenderer
 
   const loadNotifications = () => {
     try {
@@ -117,11 +122,47 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   useEffect(() => {
     loadNotifications()
+    try {
+      const storedSilent = localStorage.getItem('notification-silent')
+      if (storedSilent != null) setSilentState(storedSilent === '1')
+    } catch {}
+    try {
+      if (ipc?.invoke) {
+        ipc.invoke('notification:get-silent').then((v: any) => {
+          if (typeof v === 'boolean') setSilentState(v)
+        }).catch(() => {})
+      }
+    } catch {}
+    if (ipc?.on) {
+      const handler = (_: any, value: boolean) => setSilentState(!!value)
+      ipc.on('notification:silent', handler)
+      return () => {
+        try { ipc.removeAllListeners?.('notification:silent') } catch {}
+      }
+    }
   }, [])
 
   useEffect(() => {
     saveNotifications(state.notifications)
-  }, [state.notifications])
+    const current = state.notifications.length
+    if (current > prevCountRef.current && !silent) {
+      try {
+        const audio = new Audio(new URL('../assets/notification.mp3', import.meta.url).toString())
+        audio.volume = 1
+        audio.play().catch(() => {})
+      } catch {}
+    }
+    prevCountRef.current = current
+  }, [state.notifications, silent])
+
+  useEffect(() => {
+    try { localStorage.setItem('notification-silent', silent ? '1' : '0') } catch {}
+    try { ipc?.send?.('notification:set-silent', silent) } catch {}
+  }, [silent])
+
+  useEffect(() => {
+    try { ipc?.send?.('notification:unread-count', state.unreadCount) } catch {}
+  }, [state.unreadCount])
 
   const addNotification = (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => {
     const newNotification: Notification = {
@@ -157,7 +198,9 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         markAsRead,
         markAllAsRead,
         removeNotification,
-        clearAll
+        clearAll,
+        silent,
+        setSilent: setSilentState
       }}
     >
       {children}

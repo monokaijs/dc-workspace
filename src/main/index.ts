@@ -17,6 +17,8 @@ const TABS_FILE = path.join(DATA_DIR, 'tabs.json')
 // Global variables
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
+let silentMode = false
+let unreadCount = 0
 
 
 // Ensure data directory exists
@@ -51,6 +53,47 @@ async function writeDataFile(filePath: string, data: any): Promise<boolean> {
   }
 }
 
+function buildTrayMenu() {
+  return Menu.buildFromTemplate([
+    {
+      label: 'Show Workspace',
+      click: () => {
+        if (mainWindow) {
+          mainWindow.show()
+          mainWindow.focus()
+        }
+      }
+    },
+    { type: 'separator' },
+    {
+      label: 'Silent mode',
+      type: 'checkbox',
+      checked: silentMode,
+      click: (item: Electron.MenuItem) => {
+        // @ts-ignore
+        silentMode = !!item.checked
+        mainWindow?.webContents.send('notification:silent', silentMode)
+        if (tray) tray.setContextMenu(buildTrayMenu())
+      }
+    },
+    { type: 'separator' },
+    {
+      label: 'Quit',
+      click: () => {
+        app.quit()
+      }
+    }
+  ])
+}
+
+function updateTrayTooltip() {
+  const base = 'Workspace Browser - Click to show/hide'
+  try { tray?.setToolTip(unreadCount > 0 ? `${base} (${unreadCount} new)` : base) } catch {}
+  if (process.platform === 'darwin') {
+    try { tray?.setTitle(unreadCount > 0 ? String(unreadCount) : '') } catch {}
+  }
+}
+
 function createTray() {
   const iconPath = path.join(__dirname, '../../resources/icon.png')
   let trayIcon: Electron.NativeImage
@@ -66,26 +109,9 @@ function createTray() {
 
   tray = new Tray(trayIcon)
 
-  const contextMenu = Menu.buildFromTemplate([
-    {
-      label: 'Show Workspace',
-      click: () => {
-        if (mainWindow) {
-          mainWindow.show()
-          mainWindow.focus()
-        }
-      }
-    },
-    {
-      label: 'Quit',
-      click: () => {
-        app.quit()
-      }
-    }
-  ])
-
   tray.setToolTip('Workspace Browser - Click to show/hide')
-  tray.setContextMenu(contextMenu)
+  tray.setContextMenu(buildTrayMenu())
+  updateTrayTooltip()
 
   tray.on('click', () => {
     if (mainWindow) {
@@ -192,12 +218,18 @@ app.whenReady().then(() => {
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
 
-  ipcMain.on('webview:notification', (_evt, payload) => {
-    // payload: { url, title, options }
-    // Render your own in-app toast or route it elsewhere.
-    console.log('Intercepted notification:', payload);
+  ipcMain.handle('notification:get-silent', () => silentMode)
+  ipcMain.on('notification:set-silent', (_evt, value: boolean) => {
+    silentMode = !!value
+    if (tray) tray.setContextMenu(buildTrayMenu())
+  })
+  ipcMain.on('notification:unread-count', (_evt, count: number) => {
+    unreadCount = Number(count) || 0
+    updateTrayTooltip()
+  })
 
-    // Example: forward to your host renderer to show a custom toast UI
+  ipcMain.on('webview:notification', (_evt, payload) => {
+    console.log('Intercepted notification:', payload);
     browserWindow.webContents.send('host:show-toast', payload);
   });
 
@@ -379,6 +411,7 @@ app.whenReady().then(() => {
 
   const browserWindow = createWindow();
   browserWindow.setMenu(null);
+  // browserWindow.webContents.openDevTools()
 
   // Create system tray
   createTray()

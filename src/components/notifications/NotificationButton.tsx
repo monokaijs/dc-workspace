@@ -6,6 +6,8 @@ import {Separator} from '@/components/ui/separator'
 import {Bell, Check, Trash2, X} from 'lucide-react'
 import {useNotifications} from '@/contexts/NotificationContext'
 import {cn} from '@/lib/utils'
+import {Switch} from '@/components/ui/switch'
+import {Label} from '@/components/ui/label'
 
 
 const formatTimestamp = (timestamp: number) => {
@@ -23,7 +25,7 @@ const formatTimestamp = (timestamp: number) => {
 }
 
 export const NotificationButton: React.FC = () => {
-  const {state, markAsRead, markAllAsRead, removeNotification, clearAll} = useNotifications()
+  const {state, markAsRead, markAllAsRead, removeNotification, clearAll, silent, setSilent} = useNotifications()
   const [isOpen, setIsOpen] = useState(false)
 
   const handleMarkAsRead = (id: string, event: React.MouseEvent) => {
@@ -46,7 +48,6 @@ export const NotificationButton: React.FC = () => {
   }
 
 
-
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
@@ -66,21 +67,14 @@ export const NotificationButton: React.FC = () => {
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[400px] p-0" align="end">
+      <PopoverContent className="w-[500px] p-0" align="end">
         <div className="flex items-center justify-between p-4 border-b">
           <h3 className="font-semibold">Notifications</h3>
-          <div className="flex items-center gap-2">
-            {state.unreadCount > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleMarkAllAsRead}
-                className="h-6 px-2 text-xs"
-              >
-                <Check className="h-3 w-3 mr-1"/>
-                Mark all read
-              </Button>
-            )}
+          <div className="flex items-center gap-1">
+            <div className="flex items-center gap-2 pr-2">
+              <Label className="text-xs">Silent</Label>
+              <Switch checked={silent} onCheckedChange={setSilent}/>
+            </div>
             {state.notifications.length > 0 && (
               <Button
                 variant="ghost"
@@ -173,6 +167,19 @@ export const NotificationButton: React.FC = () => {
             </div>
           )}
         </div>
+
+        {state.unreadCount > 0 && (
+          <div className={'p-2'}>
+            <Button
+              variant="ghost"
+              onClick={handleMarkAllAsRead}
+              className="w-full"
+            >
+              <Check className="h-3 w-3 mr-1"/>
+              Mark all read
+            </Button>
+          </div>
+        )}
       </PopoverContent>
     </Popover>
   )

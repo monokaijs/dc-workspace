@@ -193,12 +193,6 @@ const BrowserContent: React.FC = () => {
 
 
 
-  // Update window title for settings page
-  useEffect(() => {
-    if (showSettings) {
-      (window as any).electronAPI?.setTitle('Settings - Workspace')
-    }
-  }, [showSettings])
 
   if (showSettings) {
     return (
