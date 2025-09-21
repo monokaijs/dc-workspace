@@ -1,8 +1,7 @@
 import React, {useEffect, useRef} from 'react'
 import {useBrowser} from '@/contexts/BrowserContext'
 import {Card} from '@/components/ui/card'
-import {Button} from '@/components/ui/button'
-import {AlertCircle, Globe} from 'lucide-react'
+import {Globe} from 'lucide-react'
 
 
 interface TabWebViewProps {
@@ -16,14 +15,14 @@ interface TabWebViewProps {
 }
 
 const TabWebView: React.FC<TabWebViewProps> = React.memo(({
-                                                 tab,
-                                                 isActive,
-                                                 onUpdateLoading,
-                                                 onUpdateTitle,
-                                                 onUpdateFavicon,
-                                                 onNavigate,
-                                                 onUpdateUrl
-                                               }) => {
+                                                            tab,
+                                                            isActive,
+                                                            onUpdateLoading,
+                                                            onUpdateTitle,
+                                                            onUpdateFavicon,
+                                                            onNavigate,
+                                                            onUpdateUrl
+                                                          }) => {
   const webviewRef = useRef<Electron.WebviewTag>(null)
 
   useEffect(() => {
@@ -71,7 +70,16 @@ const TabWebView: React.FC<TabWebViewProps> = React.memo(({
       onNavigate(tab.id, event.url)
     }
 
+    const handleConsoleMessage = (event: any) => {
+      console.log('[WEBVIEW]', event.level, event.message)
+    }
 
+
+    const handleIpcMessage = (event: any) => {
+      if (event.channel === 'webview:notification') {
+        (window as any).electron?.ipcRenderer?.send('webview:notification', event.args?.[0])
+      }
+    }
 
     // Add event listeners
     webview.addEventListener('did-start-loading', handleLoadStart)
@@ -81,6 +89,8 @@ const TabWebView: React.FC<TabWebViewProps> = React.memo(({
     webview.addEventListener('did-fail-load', handleDidFailLoad)
     webview.addEventListener('did-navigate', handleDidNavigate)
     webview.addEventListener('new-window', handleNewWindow)
+    webview.addEventListener('console-message', handleConsoleMessage)
+    webview.addEventListener('ipc-message', handleIpcMessage)
 
 
     return () => {
@@ -90,7 +100,11 @@ const TabWebView: React.FC<TabWebViewProps> = React.memo(({
       webview.removeEventListener('page-favicon-updated', handlePageFaviconUpdated)
       webview.removeEventListener('did-fail-load', handleDidFailLoad)
       webview.removeEventListener('did-navigate', handleDidNavigate)
+
+
       webview.removeEventListener('new-window', handleNewWindow)
+      webview.removeEventListener('console-message', handleConsoleMessage)
+      webview.removeEventListener('ipc-message', handleIpcMessage)
 
     }
   }, [tab?.id, onUpdateLoading, onUpdateTitle, onUpdateFavicon])
@@ -99,6 +113,7 @@ const TabWebView: React.FC<TabWebViewProps> = React.memo(({
   const lastLoadedUrlRef = React.useRef<string>('')
   const hasInitializedRef = React.useRef<boolean>(false)
   const tabIdRef = React.useRef<string>(tab.id)
+
 
   useEffect(() => {
     if (tab && webviewRef.current && tab.url !== 'about:blank') {
@@ -111,6 +126,8 @@ const TabWebView: React.FC<TabWebViewProps> = React.memo(({
           // Use loadURL for subsequent navigations to avoid reloading
           webviewRef.current.loadURL(tab.url)
         } else {
+
+
           // Use src for initial load
           webviewRef.current.src = tab.url
           hasInitializedRef.current = true
@@ -155,12 +172,6 @@ const TabWebView: React.FC<TabWebViewProps> = React.memo(({
     }
   }, [tab?.id])
 
-  const handleRetry = () => {
-    if (tab && webviewRef.current) {
-      webviewRef.current.reload()
-    }
-  }
-
   return (
     <div
       className={`absolute inset-0 ${isActive ? 'block' : 'hidden'}`}
@@ -174,30 +185,13 @@ const TabWebView: React.FC<TabWebViewProps> = React.memo(({
           </div>
         </div>
       )}
-
-      {/* Always render webview element to prevent unmounting/remounting, but hide for about:blank */}
       <webview
         ref={webviewRef}
         className={`w-full h-full bg-white ${tab.url === 'about:blank' ? 'hidden' : ''}`}
         allowpopups={true}
         webpreferences="contextIsolation=true, nodeIntegration=false, webSecurity=false"
-
         useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:143.0) Gecko/20100101 Firefox/143.0"
       />
-
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute bottom-4 right-4">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={handleRetry}
-            className="pointer-events-auto opacity-0 hover:opacity-100 transition-opacity"
-          >
-            <AlertCircle className="h-4 w-4 mr-2"/>
-            Retry
-          </Button>
-        </div>
-      </div>
     </div>
   )
 }, (prevProps, nextProps) => {
@@ -211,7 +205,15 @@ const TabWebView: React.FC<TabWebViewProps> = React.memo(({
 })
 
 export const WebView: React.FC = () => {
-  const {state, updateTabLoading, updateTabTitle, updateTabFavicon, navigateTab, updateTabUrl, setTabNavigationBar} = useBrowser()
+  const {
+    state,
+    updateTabLoading,
+    updateTabTitle,
+    updateTabFavicon,
+    navigateTab,
+    updateTabUrl,
+    setTabNavigationBar
+  } = useBrowser()
 
   const activeTab = state.tabs.find(tab => tab.id === state.activeTabId)
 
@@ -287,7 +289,8 @@ export const WebView: React.FC = () => {
                           onClick={() => handleAppClick(app)}
                         >
                           <div className="text-center space-y-3">
-                            <div className="w-12 h-12 mx-auto rounded-lg overflow-hidden bg-muted flex items-center justify-center">
+                            <div
+                              className="w-12 h-12 mx-auto rounded-lg overflow-hidden bg-muted flex items-center justify-center">
                               <img
                                 src={app.iconUrl}
                                 alt={app.name}

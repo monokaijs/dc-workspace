@@ -7,8 +7,12 @@ interface BrowserContextType {
   state: BrowserState
   navigationState: NavigationState
   createTab: (url?: string, hideNavigationBar?: boolean) => void
+  cloneTab: (tabId: string) => void
   closeTab: (tabId: string) => void
   switchTab: (tabId: string) => void
+  reorderTabs: (fromIndex: number, toIndex: number) => void
+  pinTab: (tabId: string) => void
+  unpinTab: (tabId: string) => void
   navigateTab: (tabId: string, url: string) => void
   updateTabUrl: (tabId: string, url: string) => void
   goBack: (tabId: string) => void
@@ -40,7 +44,8 @@ const createNewTab = (url: string = 'about:blank', hideNavigationBar: boolean = 
   canGoForward: false,
   history: [],
   currentHistoryIndex: -1,
-  showNavigationBar: !hideNavigationBar
+  showNavigationBar: !hideNavigationBar,
+  pinned: false
 })
 
 const defaultApps: App[] = [
@@ -82,6 +87,28 @@ const browserReducer = (state: BrowserState, action: BrowserAction): BrowserStat
       }
     }
 
+    case 'CLONE_TAB': {
+      const { tabId } = action.payload
+      const tabToClone = state.tabs.find(tab => tab.id === tabId)
+      if (!tabToClone) return state
+
+      const clonedTab: Tab = {
+        ...tabToClone,
+        id: generateId(),
+        pinned: false
+      }
+
+      const tabIndex = state.tabs.findIndex(tab => tab.id === tabId)
+      const newTabs = [...state.tabs]
+      newTabs.splice(tabIndex + 1, 0, clonedTab)
+
+      return {
+        ...state,
+        tabs: newTabs,
+        activeTabId: clonedTab.id
+      }
+    }
+
     case 'CLOSE_TAB': {
       const {tabId} = action.payload
       const newTabs = state.tabs.filter(tab => tab.id !== tabId)
@@ -113,6 +140,43 @@ const browserReducer = (state: BrowserState, action: BrowserAction): BrowserStat
       return {
         ...state,
         activeTabId: action.payload.tabId
+      }
+    }
+
+    case 'REORDER_TABS': {
+      const { fromIndex, toIndex } = action.payload
+      const newTabs = [...state.tabs]
+      const [movedTab] = newTabs.splice(fromIndex, 1)
+      newTabs.splice(toIndex, 0, movedTab)
+
+      return {
+        ...state,
+        tabs: newTabs
+      }
+    }
+
+    case 'PIN_TAB': {
+      const { tabId } = action.payload
+      const newTabs = state.tabs.map(tab =>
+        tab.id === tabId ? { ...tab, pinned: true } : tab
+      )
+
+      const pinnedTabs = newTabs.filter(tab => tab.pinned)
+      const unpinnedTabs = newTabs.filter(tab => !tab.pinned)
+
+      return {
+        ...state,
+        tabs: [...pinnedTabs, ...unpinnedTabs]
+      }
+    }
+
+    case 'UNPIN_TAB': {
+      const { tabId } = action.payload
+      return {
+        ...state,
+        tabs: state.tabs.map(tab =>
+          tab.id === tabId ? { ...tab, pinned: false } : tab
+        )
       }
     }
 
@@ -466,8 +530,15 @@ export const BrowserProvider: React.FC<BrowserProviderProps> = ({children}) => {
       type: 'CREATE_TAB',
       payload: {url, hideNavigationBar}
     }),
+    cloneTab: (tabId: string) => dispatch({type: 'CLONE_TAB', payload: {tabId}}),
     closeTab: (tabId: string) => dispatch({type: 'CLOSE_TAB', payload: {tabId}}),
     switchTab: (tabId: string) => dispatch({type: 'SWITCH_TAB', payload: {tabId}}),
+    reorderTabs: (fromIndex: number, toIndex: number) => dispatch({
+      type: 'REORDER_TABS',
+      payload: {fromIndex, toIndex}
+    }),
+    pinTab: (tabId: string) => dispatch({type: 'PIN_TAB', payload: {tabId}}),
+    unpinTab: (tabId: string) => dispatch({type: 'UNPIN_TAB', payload: {tabId}}),
     navigateTab: (tabId: string, url: string) => {
       dispatch({type: 'NAVIGATE_TAB', payload: {tabId, url}})
       dispatch({

@@ -51,19 +51,6 @@ export class UpdateService {
       console.log('🔧 Development mode: Auto-updates disabled, manual updates available for testing')
     }
 
-    // Add more detailed logging
-    console.log('🔧 Auto-updater configuration:', {
-      autoDownload: autoUpdater.autoDownload,
-      autoInstallOnAppQuit: autoUpdater.autoInstallOnAppQuit,
-      allowDowngrade: autoUpdater.allowDowngrade,
-      allowPrerelease: autoUpdater.allowPrerelease,
-      allowUnverified: process.env.ELECTRON_UPDATER_ALLOW_UNVERIFIED === 'true',
-      isDev: is.dev,
-      autoUpdatesDisabledInDev: is.dev,
-      updateConfigPath: (autoUpdater as any).updateConfigPath,
-      forceDevUpdateConfig: (autoUpdater as any).forceDevUpdateConfig
-    })
-
     // Event handlers
     autoUpdater.on('checking-for-update', () => {
       console.log('Checking for update...')

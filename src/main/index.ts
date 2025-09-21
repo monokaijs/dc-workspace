@@ -1,6 +1,7 @@
-import {app, BrowserWindow, ipcMain, shell, Tray, Menu, nativeImage, Notification} from 'electron'
+import {app, BrowserWindow, ipcMain, shell, Tray, Menu, nativeImage, Notification, session} from 'electron'
 import * as path from 'path'
 import {join} from 'path'
+import { pathToFileURL } from 'url'
 import {electronApp, is, optimizer} from '@electron-toolkit/utils'
 import {updateService} from '../services/updateService'
 import * as fs from 'fs'
@@ -145,6 +146,18 @@ function createWindow(): BrowserWindow {
     return {action: 'deny'}
   })
 
+  // Ensure every <webview> uses our vetted preload (best practice)
+  mainWindow.webContents.on('will-attach-webview', (_, webPreferences, _params) => {
+    delete (webPreferences as any).preload
+    delete (webPreferences as any).preloadURL
+    webPreferences.preload = join(__dirname, '../preload/webview.js')
+    webPreferences.nodeIntegration = false
+    webPreferences.contextIsolation = true
+    // keep your current security posture
+    if (webPreferences.webSecurity === undefined) webPreferences.webSecurity = false
+  })
+
+
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'], {
       userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36'
@@ -152,6 +165,18 @@ function createWindow(): BrowserWindow {
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
+
+  const webviewSession = session.fromPartition('persist:wv-notify'); // or 'temp:wv-notify'
+
+  webviewSession.setPermissionRequestHandler((_wc, permission, callback) => {
+    return callback(permission !== 'notifications');
+  });
+
+  // 1b) Make permission checks always look denied
+  webviewSession.setPermissionCheckHandler((_wc, permission/*, origin, details*/) => {
+    return permission !== 'notifications';
+
+  });
 
   return mainWindow
 }
@@ -166,6 +191,19 @@ app.whenReady().then(() => {
 
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
+
+  ipcMain.on('webview:notification', (_evt, payload) => {
+    // payload: { url, title, options }
+    // Render your own in-app toast or route it elsewhere.
+    console.log('Intercepted notification:', payload);
+
+    // Example: forward to your host renderer to show a custom toast UI
+    browserWindow.webContents.send('host:show-toast', payload);
+  });
+
+  ipcMain.on('webview:preload-loaded', (_evt, payload) => {
+    console.log('🚀 Webview preload script loaded:', payload);
+  });
 
   // Data persistence IPC handlers
   ipcMain.handle('data:read-browser-state', async () => {
@@ -217,6 +255,13 @@ app.whenReady().then(() => {
 
   ipcMain.handle('data:get-data-dir', () => {
     return DATA_DIR
+  })
+
+  ipcMain.handle('get-webview-preload-path', () => {
+    const absPath = join(__dirname, '../preload/webview.js')
+    const fileUrl = pathToFileURL(absPath).toString()
+    console.log('📁 Webview preload URL:', fileUrl)
+    return fileUrl
   })
 
 

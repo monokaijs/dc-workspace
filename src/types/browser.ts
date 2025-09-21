@@ -17,6 +17,7 @@ export interface Tab {
   history: HistoryEntry[]
   currentHistoryIndex: number
   showNavigationBar: boolean
+  pinned: boolean
 }
 
 export interface App {
@@ -64,8 +65,12 @@ export interface SearchSuggestion {
 
 export type BrowserAction =
   | { type: 'CREATE_TAB'; payload: { url?: string; hideNavigationBar?: boolean } }
+  | { type: 'CLONE_TAB'; payload: { tabId: string } }
   | { type: 'CLOSE_TAB'; payload: { tabId: string } }
   | { type: 'SWITCH_TAB'; payload: { tabId: string } }
+  | { type: 'REORDER_TABS'; payload: { fromIndex: number; toIndex: number } }
+  | { type: 'PIN_TAB'; payload: { tabId: string } }
+  | { type: 'UNPIN_TAB'; payload: { tabId: string } }
   | { type: 'NAVIGATE_TAB'; payload: { tabId: string; url: string } }
   | { type: 'UPDATE_TAB_URL'; payload: { tabId: string; url: string } }
   | { type: 'GO_BACK'; payload: { tabId: string } }

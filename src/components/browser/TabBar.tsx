@@ -6,40 +6,114 @@ import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
-  ContextMenuTrigger
+  ContextMenuTrigger,
+  ContextMenuSeparator
 } from '@/components/ui/context-menu'
-import { Plus, X, RotateCcw, Copy } from 'lucide-react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { Plus, X, RotateCcw, Copy, Pin, PinOff, Files } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export const TabBar: React.FC = () => {
-  const { state, createTab, closeTab, switchTab, refreshTab } = useBrowser()
+  const {
+    state,
+    createTab,
+    cloneTab,
+    closeTab,
+    switchTab,
+    refreshTab,
+    reorderTabs,
+    pinTab,
+    unpinTab
+  } = useBrowser()
   const [draggedTabId, setDraggedTabId] = useState<string | null>(null)
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
+  const [showPinConfirmDialog, setShowPinConfirmDialog] = useState<string | null>(null)
 
-  const handleTabClick = (tabId: string) => {
-    switchTab(tabId)
+  const handleTabClick = (e: React.MouseEvent, tabId: string) => {
+    if (e.button === 1) {
+      e.preventDefault()
+      const tab = state.tabs.find(t => t.id === tabId)
+      if (tab?.pinned) {
+        setShowPinConfirmDialog(tabId)
+      } else {
+        closeTab(tabId)
+      }
+    } else if (e.button === 0) {
+      switchTab(tabId)
+    }
   }
 
   const handleCloseTab = (e: React.MouseEvent, tabId: string) => {
     e.stopPropagation()
-    closeTab(tabId)
+    const tab = state.tabs.find(t => t.id === tabId)
+    if (tab?.pinned) {
+      setShowPinConfirmDialog(tabId)
+    } else {
+      closeTab(tabId)
+    }
   }
 
   const handleNewTab = () => {
     createTab()
   }
 
+  const handleCloneTab = (tabId: string) => {
+    cloneTab(tabId)
+  }
+
+  const handlePinTab = (tabId: string) => {
+    const tab = state.tabs.find(t => t.id === tabId)
+    if (tab?.pinned) {
+      unpinTab(tabId)
+    } else {
+      pinTab(tabId)
+    }
+  }
+
+  const handleConfirmClosePinnedTab = () => {
+    if (showPinConfirmDialog) {
+      closeTab(showPinConfirmDialog)
+      setShowPinConfirmDialog(null)
+    }
+  }
+
   const handleDragStart = (e: React.DragEvent, tabId: string) => {
     setDraggedTabId(tabId)
     e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', tabId)
   }
 
   const handleDragEnd = () => {
     setDraggedTabId(null)
+    setDragOverIndex(null)
   }
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault()
     e.dataTransfer.dropEffect = 'move'
+    setDragOverIndex(index)
+  }
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault()
+    const draggedId = e.dataTransfer.getData('text/plain')
+    const draggedIndex = state.tabs.findIndex(tab => tab.id === draggedId)
+
+    if (draggedIndex !== -1 && draggedIndex !== dropIndex) {
+      reorderTabs(draggedIndex, dropIndex)
+    }
+
+    setDraggedTabId(null)
+    setDragOverIndex(null)
   }
 
   const truncateTitle = (title: string, maxLength: number = 20) => {
@@ -47,28 +121,41 @@ export const TabBar: React.FC = () => {
     return title.substring(0, maxLength) + '...'
   }
 
+  const pinnedTabs = state.tabs.filter(tab => tab.pinned)
+  const unpinnedTabs = state.tabs.filter(tab => !tab.pinned)
+  const allTabs = [...pinnedTabs, ...unpinnedTabs]
+
   return (
     <div className="flex items-center bg-background border-b">
       <ScrollArea className="flex-1">
         <div className="flex items-center">
-          {state.tabs.map((tab) => (
+          {allTabs.map((tab, index) => (
             <ContextMenu key={tab.id}>
               <ContextMenuTrigger>
                 <div
                   className={cn(
-                    "flex items-center gap-2 px-4 py-2 border-r cursor-pointer select-none min-w-0 w-[200px] group relative",
+                    "flex items-center gap-2 px-4 py-2 border-r cursor-pointer select-none min-w-0 group relative",
                     "hover:bg-muted/50 transition-colors",
                     tab.id === state.activeTabId
                       ? "bg-background border-b-2 border-b-primary"
                       : "bg-muted/20",
-                    draggedTabId === tab.id && "opacity-50"
+                    draggedTabId === tab.id && "opacity-50",
+                    dragOverIndex === index && "border-l-2 border-l-primary",
+                    tab.pinned ? "w-[60px]" : "w-[200px]",
+                    tab.pinned && "border-r-2 border-r-muted"
                   )}
-                  onClick={() => handleTabClick(tab.id)}
+                  onClick={(e) => handleTabClick(e, tab.id)}
+                  onMouseDown={(e) => e.button === 1 && e.preventDefault()}
                   draggable
                   onDragStart={(e) => handleDragStart(e, tab.id)}
                   onDragEnd={handleDragEnd}
-                  onDragOver={handleDragOver}
+                  onDragOver={(e) => handleDragOver(e, index)}
+                  onDrop={(e) => handleDrop(e, index)}
                 >
+
+                  {tab.pinned && (
+                    <Pin className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                  )}
 
                   {tab.isLoading && (
                     <div className="w-3 h-3 border border-primary border-t-transparent rounded-full animate-spin flex-shrink-0" />
@@ -87,11 +174,13 @@ export const TabBar: React.FC = () => {
                     <div className="w-4 h-4 bg-muted rounded-sm flex-shrink-0" />
                   )}
 
-                  <span className="text-sm truncate flex-1 min-w-0">
-                    {truncateTitle(tab.title)}
-                  </span>
+                  {!tab.pinned && (
+                    <span className="text-sm truncate flex-1 min-w-0">
+                      {truncateTitle(tab.title)}
+                    </span>
+                  )}
 
-                  {state.tabs.length > 1 && (
+                  {state.tabs.length > 1 && !tab.pinned && (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -109,6 +198,11 @@ export const TabBar: React.FC = () => {
                   <Plus className="h-4 w-4 mr-2" />
                   New Tab
                 </ContextMenuItem>
+                <ContextMenuItem onClick={() => handleCloneTab(tab.id)}>
+                  <Files className="h-4 w-4 mr-2" />
+                  Clone Tab
+                </ContextMenuItem>
+                <ContextMenuSeparator />
                 <ContextMenuItem onClick={() => refreshTab(tab.id)}>
                   <RotateCcw className="h-4 w-4 mr-2" />
                   Refresh
@@ -119,9 +213,23 @@ export const TabBar: React.FC = () => {
                   <Copy className="h-4 w-4 mr-2" />
                   Copy URL
                 </ContextMenuItem>
+                <ContextMenuSeparator />
+                <ContextMenuItem onClick={() => handlePinTab(tab.id)}>
+                  {tab.pinned ? (
+                    <>
+                      <PinOff className="h-4 w-4 mr-2" />
+                      Unpin Tab
+                    </>
+                  ) : (
+                    <>
+                      <Pin className="h-4 w-4 mr-2" />
+                      Pin Tab
+                    </>
+                  )}
+                </ContextMenuItem>
                 {state.tabs.length > 1 && (
                   <ContextMenuItem
-                    onClick={() => closeTab(tab.id)}
+                    onClick={() => handleCloseTab(new MouseEvent('click') as any, tab.id)}
                     className="text-destructive"
                   >
                     <X className="h-4 w-4 mr-2" />
@@ -142,6 +250,23 @@ export const TabBar: React.FC = () => {
       >
         <Plus className="h-4 w-4" />
       </Button>
+
+      <AlertDialog open={!!showPinConfirmDialog} onOpenChange={() => setShowPinConfirmDialog(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Close Pinned Tab</AlertDialogTitle>
+            <AlertDialogDescription>
+              This tab is pinned. Are you sure you want to close it?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmClosePinnedTab}>
+              Close Tab
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

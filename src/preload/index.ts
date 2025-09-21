@@ -8,8 +8,7 @@ const api = {
   minimize: () => ipcRenderer.invoke('window-minimize'),
   maximize: () => ipcRenderer.invoke('window-maximize'),
   close: () => ipcRenderer.invoke('window-close'),
-  quit: () => ipcRenderer.invoke('window-quit'),
-  setTitle: (title: string) => ipcRenderer.invoke('window-set-title', title)
+  quit: () => ipcRenderer.invoke('window-quit')
 }
 
 // Data persistence APIs
