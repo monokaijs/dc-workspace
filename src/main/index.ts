@@ -300,6 +300,12 @@ app.whenReady().then(() => {
     app.quit()
   })
 
+  ipcMain.handle('window-set-title', (_, title: string) => {
+    if (mainWindow) {
+      mainWindow.setTitle(title)
+    }
+  })
+
   // Update functionality
   ipcMain.handle('update:check', async (_, manual = false) => {
     return await updateService.checkForUpdates(manual)

@@ -6,6 +6,7 @@ declare global {
       minimize: () => Promise<void>
       maximize: () => Promise<void>
       close: () => Promise<void>
+      setTitle: (title: string) => Promise<void>
     }
     dataAPI: {
       readBrowserState: () => Promise<any>

@@ -1,4 +1,4 @@
-import React, {useState} from 'react'
+import React, {useState, useEffect} from 'react'
 import {BrowserProvider, useBrowser} from '@/contexts/BrowserContext'
 import {NotificationProvider} from '@/contexts/NotificationContext'
 import {TabBar} from './TabBar'
@@ -177,7 +177,28 @@ const BrowserContent: React.FC = () => {
   // Enable keyboard shortcuts
   useKeyboardShortcuts()
 
+  // Update window title when active tab changes or tab title changes
+  useEffect(() => {
+    const updateTitle = async () => {
+      if (activeTab && activeTab.title && activeTab.title !== 'New Tab') {
+        const title = `${activeTab.title} - Workspace`
+        await (window as any).electronAPI?.setTitle(title)
+      } else {
+        await (window as any).electronAPI?.setTitle('Workspace')
+      }
+    }
 
+    updateTitle()
+  }, [activeTab?.title, activeTab?.id])
+
+
+
+  // Update window title for settings page
+  useEffect(() => {
+    if (showSettings) {
+      (window as any).electronAPI?.setTitle('Settings - Workspace')
+    }
+  }, [showSettings])
 
   if (showSettings) {
     return (
@@ -193,7 +214,7 @@ const BrowserContent: React.FC = () => {
               onClick={() => setShowSettings(false)}
               className="h-8 px-3"
             >
-              ← Back to Browser
+              ← Back to Workspace
             </Button>
             <span className="text-sm font-medium">Settings</span>
           </div>
@@ -216,7 +237,12 @@ const BrowserContent: React.FC = () => {
       >
         <div className="flex items-center gap-2" style={{WebkitAppRegion: 'no-drag'} as any}>
           <BrowserMenu onOpenSettings={() => setShowSettings(true)}/>
-          <span className="text-sm font-medium">Workspace</span>
+          <span className="text-sm font-medium">
+            {activeTab && activeTab.title && activeTab.title !== 'New Tab'
+              ? `${activeTab.title} - Workspace`
+              : 'Workspace'
+            }
+          </span>
         </div>
 
         <div className="flex items-center gap-2" style={{WebkitAppRegion: 'no-drag'} as any}>
