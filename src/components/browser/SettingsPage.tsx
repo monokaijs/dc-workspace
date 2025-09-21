@@ -392,7 +392,7 @@ export const SettingsPage: React.FC = () => {
               <div className="space-y-0.5">
                 <Label>Automatic updates</Label>
                 <p className="text-sm text-muted-foreground">
-                  Automatically check for updates when the app starts
+                  Automatically check for updates when the app starts (disabled in development mode)
                 </p>
               </div>
               <Switch

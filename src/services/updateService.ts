@@ -34,8 +34,9 @@ export class UpdateService {
     // Set update server for development
     if (is.dev) {
       autoUpdater.updateConfigPath = 'dev-app-update.yml'
-      // Force update checks in development for testing
+      // Force update checks in development for testing (manual only)
       autoUpdater.forceDevUpdateConfig = true
+      console.log('🔧 Development mode: Auto-updates disabled, manual updates available for testing')
     }
 
     // Add more detailed logging
@@ -43,6 +44,7 @@ export class UpdateService {
       autoDownload: autoUpdater.autoDownload,
       autoInstallOnAppQuit: autoUpdater.autoInstallOnAppQuit,
       isDev: is.dev,
+      autoUpdatesDisabledInDev: is.dev,
       updateConfigPath: (autoUpdater as any).updateConfigPath,
       forceDevUpdateConfig: (autoUpdater as any).forceDevUpdateConfig
     })
@@ -114,6 +116,12 @@ export class UpdateService {
 
     if (!manual && !this.autoCheckEnabled) {
       console.log('🔄 Auto-check disabled, skipping...')
+      return false
+    }
+
+    // Skip auto updates in development mode
+    if (!manual && is.dev) {
+      console.log('🔄 Auto-update disabled in development mode, skipping...')
       return false
     }
 
@@ -189,6 +197,13 @@ export class UpdateService {
 
   async checkForUpdatesOnStartup(): Promise<void> {
     if (!this.autoCheckEnabled) {
+      console.log('🔄 Auto-check disabled, skipping startup update check...')
+      return
+    }
+
+    // Skip startup update checks in development mode
+    if (is.dev) {
+      console.log('🔄 Auto-update disabled in development mode, skipping startup update check...')
       return
     }
 
