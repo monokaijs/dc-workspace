@@ -7,6 +7,7 @@ import {WebView} from './WebView'
 import {HistoryPanel} from './HistoryPanel'
 import {SettingsPage} from './SettingsPage'
 import {DataManagement} from './DataManagement'
+import {SidePanel} from './SidePanel'
 import {NotificationButton} from '@/components/notifications/NotificationButton'
 import {UpdateNotification} from '../UpdateNotification'
 import {Button} from '@/components/ui/button'
@@ -34,7 +35,7 @@ interface BrowserMenuProps {
 }
 
 const BrowserMenu: React.FC<BrowserMenuProps> = ({onOpenSettings}) => {
-  const {state, toggleTabNavigationBar} = useBrowser()
+  const {state, toggleTabNavigationBar, setPanelUrl} = useBrowser()
   const activeTab = state.tabs.find(tab => tab.id === state.activeTabId)
 
   const handleToggleNavigationBar = () => {
@@ -47,6 +48,10 @@ const BrowserMenu: React.FC<BrowserMenuProps> = ({onOpenSettings}) => {
     if (activeTab) {
       window.dispatchEvent(new CustomEvent('browser-show-devtools', { detail: { tabId: activeTab.id } }))
     }
+  }
+
+  const handleOpenSidePanel = () => {
+    setPanelUrl('https://www.google.com')
   }
 
   return (
@@ -65,6 +70,10 @@ const BrowserMenu: React.FC<BrowserMenuProps> = ({onOpenSettings}) => {
           <Navigation className="h-4 w-4 mr-2"/>
           Show Navigation Bar
         </DropdownMenuCheckboxItem>
+        <DropdownMenuItem onClick={handleOpenSidePanel}>
+          <Navigation className="h-4 w-4 mr-2"/>
+          Open Side Panel
+        </DropdownMenuItem>
         <DropdownMenuSeparator/>
         <DropdownMenuItem onClick={onOpenSettings}>
           <Settings className="h-4 w-4 mr-2"/>
@@ -280,12 +289,7 @@ const BrowserContent: React.FC = () => {
           <>
             <PanelResizeHandle className="w-1 bg-border cursor-col-resize" />
             <Panel defaultSize={30} minSize={20} maxSize={70} className="overflow-hidden border-l bg-background">
-              <webview
-                src={state.panelUrl || undefined}
-                allowpopups={true}
-                webpreferences="contextIsolation=true, nodeIntegration=false, webSecurity=false"
-                className="w-full h-full bg-white"
-              />
+              <SidePanel />
             </Panel>
           </>
         ) : null}
