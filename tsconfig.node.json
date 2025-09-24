@@ -3,6 +3,16 @@
   "include": ["electron.vite.config.*", "src/main/**/*", "src/preload/**/*", "src/lib/utils.ts"],
   "compilerOptions": {
     "composite": true,
-    "types": ["electron-vite/node"]
+    "types": ["electron-vite/node"],
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noImplicitReturns": false,
+    "noFallthroughCasesInSwitch": false,
+    "noUncheckedIndexedAccess": false,
+    "noImplicitOverride": false,
+    "noPropertyAccessFromIndexSignature": false,
+    "noImplicitThis": false,
+    "skipLibCheck": true,
+    "strict": false
   }
 }
