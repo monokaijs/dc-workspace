@@ -95,13 +95,27 @@ function updateTrayTooltip() {
 }
 
 function createTray() {
-  const iconPath = path.join(__dirname, '../../resources/icon.png')
   let trayIcon: Electron.NativeImage
 
   try {
-    trayIcon = nativeImage.createFromPath(iconPath)
-    if (trayIcon.isEmpty()) {
-      trayIcon = nativeImage.createEmpty()
+    if (process.platform === 'darwin') {
+      // Use smaller template icon for macOS tray
+      const iconPath = path.join(__dirname, '../../resources/trayTemplate.png')
+      trayIcon = nativeImage.createFromPath(iconPath)
+      if (!trayIcon.isEmpty()) {
+        // Set as template image for proper macOS integration
+        trayIcon.setTemplateImage(true)
+      } else {
+        // Fallback to creating a simple template icon
+        trayIcon = nativeImage.createEmpty()
+      }
+    } else {
+      // Use regular icon for other platforms
+      const iconPath = path.join(__dirname, '../../resources/icon.png')
+      trayIcon = nativeImage.createFromPath(iconPath)
+      if (trayIcon.isEmpty()) {
+        trayIcon = nativeImage.createEmpty()
+      }
     }
   } catch (error) {
     trayIcon = nativeImage.createEmpty()
