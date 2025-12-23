@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Download, RefreshCw, X, CheckCircle, AlertCircle } from 'lucide-react'
+import DOMPurify from 'dompurify'
 
 interface UpdateInfo {
   version: string
@@ -173,9 +174,10 @@ export const UpdateNotification: React.FC = () => {
               </div>
               
               {updateInfo.releaseNotes && (
-                <div className="text-sm text-muted-foreground max-h-20 overflow-y-auto">
-                  {updateInfo.releaseNotes}
-                </div>
+                <div
+                  className="text-sm text-muted-foreground max-h-20 overflow-y-auto prose prose-sm dark:prose-invert"
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(updateInfo.releaseNotes) }}
+                />
               )}
 
               {isDownloading && downloadProgress && (

@@ -197,8 +197,28 @@ function createWindow(): BrowserWindow {
     if (webPreferences.webSecurity === undefined) webPreferences.webSecurity = false
   })
 
-  // Link context menu for webviews
+  // Handle new window requests from webviews (target="_blank", window.open, etc.)
+  let lastOpenUrl = ''
+  let lastOpenTime = 0
+  const handledWebContents = new Set<number>()
   mainWindow.webContents.on('did-attach-webview', (_event, wc) => {
+    if (handledWebContents.has(wc.id)) return
+    handledWebContents.add(wc.id)
+    wc.on('destroyed', () => handledWebContents.delete(wc.id))
+
+    wc.setWindowOpenHandler(({ url }) => {
+      if (url && mainWindow) {
+        const now = Date.now()
+        if (url === lastOpenUrl && now - lastOpenTime < 500) {
+          return { action: 'deny' }
+        }
+        lastOpenUrl = url
+        lastOpenTime = now
+        mainWindow.webContents.send('host:open-new-tab', { url })
+      }
+      return { action: 'deny' }
+    })
+
     wc.on('context-menu', (_e, params: any) => {
       const link: string | undefined = params?.linkURL
       if (!link) return

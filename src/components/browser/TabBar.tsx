@@ -146,6 +146,12 @@ export const TabBar: React.FC = () => {
                   )}
                   onClick={(e) => handleTabClick(e, tab.id)}
                   onMouseDown={(e) => e.button === 1 && e.preventDefault()}
+                  onAuxClick={(e) => {
+                    if (e.button === 1) {
+                      e.preventDefault()
+                      handleCloseTab(e as any, tab.id)
+                    }
+                  }}
                   draggable
                   onDragStart={(e) => handleDragStart(e, tab.id)}
                   onDragEnd={handleDragEnd}

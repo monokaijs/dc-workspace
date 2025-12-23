@@ -3,6 +3,9 @@ import { ipcRenderer, webFrame } from 'electron';
 
 const SHIM = `
 (() => {
+  if (window.__wvBridgeInitialized) return;
+  window.__wvBridgeInitialized = true;
+
   function emit(type, detail){ try{ window.postMessage({__wvNotifyBridge:true,type,detail}, '*'); }catch{} }
 
   // 1) Intercept window.Notification
@@ -31,7 +34,7 @@ const SHIM = `
         writable: true,
         value: function(title, options = {}) {
           emit('sw-notification', { url: location.href, title, options });
-          return Promise.resolve(); // swallow native
+          return Promise.resolve();
         }
       });
     }
@@ -39,14 +42,10 @@ const SHIM = `
 })();
 `;
 
-// Run in main world (worldId = 0)
 webFrame.executeJavaScriptInIsolatedWorld(0, [{ code: SHIM }]);
 
-// Bridge to host
 window.addEventListener('message', (ev: any) => {
-  console.log('Webview message:', ev.data)
-  if ((ev).data.__wvNotifyBridge) {
-    console.log('Webview notification:', ev.data.detail)
-    ipcRenderer.sendToHost('webview:notification', { source: ev.data.type, ...ev.data.detail });
-  }
+  if (!(ev).data.__wvNotifyBridge) return;
+  const { type, detail } = ev.data;
+  ipcRenderer.sendToHost('webview:notification', { source: type, ...detail });
 });

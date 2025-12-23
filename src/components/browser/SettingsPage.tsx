@@ -1,22 +1,15 @@
-import React, { useState, useEffect } from 'react'
-import { useBrowser } from '@/contexts/BrowserContext'
+import React, {useEffect, useState} from 'react'
+import {useBrowser} from '@/contexts/BrowserContext'
 
-import { App } from '@/types/browser'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
-import { Badge } from '@/components/ui/badge'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter
-} from '@/components/ui/dialog'
+import {App} from '@/types/browser'
+import {Button} from '@/components/ui/button'
+import {Input} from '@/components/ui/input'
+import {Label} from '@/components/ui/label'
+import {Switch} from '@/components/ui/switch'
+import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card'
+import {Separator} from '@/components/ui/separator'
+import {Badge} from '@/components/ui/badge'
+import {Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger} from '@/components/ui/dialog'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,10 +21,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger
 } from '@/components/ui/alert-dialog'
-import { Plus, Trash2, Edit, TestTube, Download, RefreshCw, Palette } from 'lucide-react'
-import { getFaviconUrl } from '@/utils/url'
-import { useTheme } from '@/components/theme-provider'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {Download, Edit, Palette, Plus, RefreshCw, TestTube, Trash2} from 'lucide-react'
+import {getFaviconUrl} from '@/utils/url'
+import {useTheme} from '@/components/theme-provider'
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/components/ui/select'
+import { is } from '@electron-toolkit/utils'
 
 
 interface AddAppDialogProps {
@@ -39,7 +33,7 @@ interface AddAppDialogProps {
   trigger: React.ReactNode
 }
 
-const AddAppDialog: React.FC<AddAppDialogProps> = ({ onAddApp, trigger }) => {
+const AddAppDialog: React.FC<AddAppDialogProps> = ({onAddApp, trigger}) => {
   const [open, setOpen] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
@@ -60,7 +54,7 @@ const AddAppDialog: React.FC<AddAppDialogProps> = ({ onAddApp, trigger }) => {
         category: formData.category || 'Other',
         hideNavigationBar: formData.hideNavigationBar
       })
-      setFormData({ name: '', url: '', description: '', category: '', hideNavigationBar: false })
+      setFormData({name: '', url: '', description: '', category: '', hideNavigationBar: false})
       setOpen(false)
     }
   }
@@ -80,7 +74,7 @@ const AddAppDialog: React.FC<AddAppDialogProps> = ({ onAddApp, trigger }) => {
             <Input
               id="name"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) => setFormData({...formData, name: e.target.value})}
               placeholder="e.g., Gmail"
               required
             />
@@ -90,7 +84,7 @@ const AddAppDialog: React.FC<AddAppDialogProps> = ({ onAddApp, trigger }) => {
             <Input
               id="url"
               value={formData.url}
-              onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+              onChange={(e) => setFormData({...formData, url: e.target.value})}
               placeholder="e.g., gmail.com or https://gmail.com"
               required
             />
@@ -100,7 +94,7 @@ const AddAppDialog: React.FC<AddAppDialogProps> = ({ onAddApp, trigger }) => {
             <Input
               id="description"
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              onChange={(e) => setFormData({...formData, description: e.target.value})}
               placeholder="Brief description of the app"
             />
           </div>
@@ -109,7 +103,7 @@ const AddAppDialog: React.FC<AddAppDialogProps> = ({ onAddApp, trigger }) => {
             <Input
               id="category"
               value={formData.category}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              onChange={(e) => setFormData({...formData, category: e.target.value})}
               placeholder="e.g., Productivity, Social, Entertainment"
             />
           </div>
@@ -117,7 +111,7 @@ const AddAppDialog: React.FC<AddAppDialogProps> = ({ onAddApp, trigger }) => {
             <Switch
               id="hideNavigationBar"
               checked={formData.hideNavigationBar}
-              onCheckedChange={(checked) => setFormData({ ...formData, hideNavigationBar: checked })}
+              onCheckedChange={(checked) => setFormData({...formData, hideNavigationBar: checked})}
             />
             <Label htmlFor="hideNavigationBar" className="text-sm">
               Hide navigation bar when opening this app
@@ -136,10 +130,10 @@ const AddAppDialog: React.FC<AddAppDialogProps> = ({ onAddApp, trigger }) => {
 }
 
 export const SettingsPage: React.FC = () => {
-  const { state, updateSettings, addApp, removeApp, updateApp } = useBrowser()
+  const {state, updateSettings, addApp, removeApp, updateApp} = useBrowser()
 
   const [editingApp, setEditingApp] = useState<App | null>(null)
-  const { theme, setTheme } = useTheme()
+  const {theme, setTheme} = useTheme()
   const [editFormData, setEditFormData] = useState({
     name: '',
     url: '',
@@ -151,9 +145,8 @@ export const SettingsPage: React.FC = () => {
   const [currentVersion, setCurrentVersion] = useState<string>('')
 
   const handleSettingChange = (key: keyof typeof state.settings, value: any) => {
-    updateSettings({ [key]: value })
+    updateSettings({[key]: value})
   }
-
 
 
   const handleAutoStartChange = async (enabled: boolean) => {
@@ -161,7 +154,7 @@ export const SettingsPage: React.FC = () => {
       const success = await (window as any).autoStartAPI.setStatus(enabled)
       if (success) {
         setAutoStartEnabled(enabled)
-        updateSettings({ startWithSystem: enabled })
+        updateSettings({startWithSystem: enabled})
       }
     } catch (error) {
       console.error('Failed to update auto-start setting:', error)
@@ -171,7 +164,7 @@ export const SettingsPage: React.FC = () => {
   const handleAutoUpdateChange = async (enabled: boolean) => {
     try {
       await (window as any).updateAPI.setAutoCheck(enabled)
-      updateSettings({ autoCheckUpdates: enabled })
+      updateSettings({autoCheckUpdates: enabled})
     } catch (error) {
       console.error('Failed to update auto-update setting:', error)
     }
@@ -202,7 +195,7 @@ export const SettingsPage: React.FC = () => {
 
         // Sync the app setting with the actual system state
         if (status !== state.settings.startWithSystem) {
-          updateSettings({ startWithSystem: status })
+          updateSettings({startWithSystem: status})
         }
       } catch (error) {
         console.error('Failed to load auto-start status:', error)
@@ -228,9 +221,6 @@ export const SettingsPage: React.FC = () => {
   }, [])
 
 
-
-
-
   const handleEditApp = (app: App) => {
     setEditingApp(app)
     setEditFormData({
@@ -253,7 +243,7 @@ export const SettingsPage: React.FC = () => {
         iconUrl: getFaviconUrl(editFormData.url)
       })
       setEditingApp(null)
-      setEditFormData({ name: '', url: '', description: '', category: '', hideNavigationBar: false })
+      setEditFormData({name: '', url: '', description: '', category: '', hideNavigationBar: false})
     }
   }
 
@@ -295,7 +285,7 @@ export const SettingsPage: React.FC = () => {
               />
             </div>
 
-            <Separator />
+            <Separator/>
 
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
@@ -310,7 +300,7 @@ export const SettingsPage: React.FC = () => {
               />
             </div>
 
-            <Separator />
+            <Separator/>
 
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
@@ -331,7 +321,7 @@ export const SettingsPage: React.FC = () => {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Palette className="h-5 w-5" />
+              <Palette className="h-5 w-5"/>
               Appearance
             </CardTitle>
           </CardHeader>
@@ -342,7 +332,7 @@ export const SettingsPage: React.FC = () => {
             </div>
             <div className="flex items-center gap-3">
               <Select value={theme} onValueChange={(v) => setTheme(v as any)}>
-                <SelectTrigger className="w-[180px]"><SelectValue placeholder="Theme" /></SelectTrigger>
+                <SelectTrigger className="w-[180px]"><SelectValue placeholder="Theme"/></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="system">System</SelectItem>
                   <SelectItem value="light">Light</SelectItem>
@@ -351,7 +341,7 @@ export const SettingsPage: React.FC = () => {
               </Select>
             </div>
 
-            <Separator />
+            <Separator/>
 
             <div>
               <Label>Color palette</Label>
@@ -359,14 +349,14 @@ export const SettingsPage: React.FC = () => {
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
               {[
-                { value: 'slate', label: 'Slate', hsl: '222.2 47.4% 11.2%' },
-                { value: 'blue', label: 'Blue', hsl: '221.2 83.2% 53.3%' },
-                { value: 'violet', label: 'Violet', hsl: '262.1 83.3% 57.8%' },
-                { value: 'green', label: 'Green', hsl: '142.1 70.6% 45.3%' },
-                { value: 'rose', label: 'Rose', hsl: '347.7 77.2% 50.2%' },
-                { value: 'zinc', label: 'Zinc', hsl: '240 5.9% 50.4%' },
-                { value: 'orange', label: 'Orange', hsl: '24.6 95% 53.1%' },
-                { value: 'yellow', label: 'Yellow', hsl: '47.9 95.8% 53.1%' },
+                {value: 'slate', label: 'Slate', hsl: '222.2 47.4% 11.2%'},
+                {value: 'blue', label: 'Blue', hsl: '221.2 83.2% 53.3%'},
+                {value: 'violet', label: 'Violet', hsl: '262.1 83.3% 57.8%'},
+                {value: 'green', label: 'Green', hsl: '142.1 70.6% 45.3%'},
+                {value: 'rose', label: 'Rose', hsl: '347.7 77.2% 50.2%'},
+                {value: 'zinc', label: 'Zinc', hsl: '240 5.9% 50.4%'},
+                {value: 'orange', label: 'Orange', hsl: '24.6 95% 53.1%'},
+                {value: 'yellow', label: 'Yellow', hsl: '47.9 95.8% 53.1%'},
               ].map(p => (
                 <Button
                   key={p.value}
@@ -378,7 +368,7 @@ export const SettingsPage: React.FC = () => {
                 >
                   <span
                     className="w-3 h-3 rounded-full mr-2"
-                    style={{ backgroundColor: `hsl(${p.hsl})` }}
+                    style={{backgroundColor: `hsl(${p.hsl})`}}
                   />
                   {p.label}
                 </Button>
@@ -391,7 +381,7 @@ export const SettingsPage: React.FC = () => {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Download className="h-5 w-5" />
+              <Download className="h-5 w-5"/>
               Updates
             </CardTitle>
           </CardHeader>
@@ -405,23 +395,19 @@ export const SettingsPage: React.FC = () => {
               </div>
               <div className="flex gap-2">
                 <Button onClick={handleCheckForUpdates} variant="outline" size="sm">
-                  <RefreshCw className="h-4 w-4 mr-2" />
+                  <RefreshCw className="h-4 w-4 mr-2"/>
                   Check for Updates
-                </Button>
-                <Button onClick={handleForceCheckForUpdates} variant="outline" size="sm">
-                  <TestTube className="h-4 w-4 mr-2" />
-                  Force Check (Dev)
                 </Button>
               </div>
             </div>
 
-            <Separator />
+            <Separator/>
 
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Automatic updates</Label>
                 <p className="text-sm text-muted-foreground">
-                  Automatically check for updates when the app starts (disabled in development mode)
+                  Automatically check for updates when the app starts.
                 </p>
               </div>
               <Switch
@@ -433,7 +419,6 @@ export const SettingsPage: React.FC = () => {
         </Card>
 
 
-
         {/* Apps Management */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
@@ -442,7 +427,7 @@ export const SettingsPage: React.FC = () => {
               onAddApp={addApp}
               trigger={
                 <Button>
-                  <Plus className="h-4 w-4 mr-2" />
+                  <Plus className="h-4 w-4 mr-2"/>
                   Add App
                 </Button>
               }
@@ -481,7 +466,7 @@ export const SettingsPage: React.FC = () => {
                             onClick={() => handleEditApp(app)}
                             className="h-8 w-8 p-0"
                           >
-                            <Edit className="h-3 w-3" />
+                            <Edit className="h-3 w-3"/>
                           </Button>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
@@ -490,7 +475,7 @@ export const SettingsPage: React.FC = () => {
                                 size="sm"
                                 className="h-8 w-8 p-0 text-destructive hover:text-destructive"
                               >
-                                <Trash2 className="h-3 w-3" />
+                                <Trash2 className="h-3 w-3"/>
                               </Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
@@ -541,7 +526,7 @@ export const SettingsPage: React.FC = () => {
                   <Input
                     id="edit-name"
                     value={editFormData.name}
-                    onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                    onChange={(e) => setEditFormData({...editFormData, name: e.target.value})}
                     required
                   />
                 </div>
@@ -550,7 +535,7 @@ export const SettingsPage: React.FC = () => {
                   <Input
                     id="edit-url"
                     value={editFormData.url}
-                    onChange={(e) => setEditFormData({ ...editFormData, url: e.target.value })}
+                    onChange={(e) => setEditFormData({...editFormData, url: e.target.value})}
                     required
                   />
                 </div>
@@ -559,7 +544,7 @@ export const SettingsPage: React.FC = () => {
                   <Input
                     id="edit-description"
                     value={editFormData.description}
-                    onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                    onChange={(e) => setEditFormData({...editFormData, description: e.target.value})}
                   />
                 </div>
                 <div>
@@ -567,14 +552,14 @@ export const SettingsPage: React.FC = () => {
                   <Input
                     id="edit-category"
                     value={editFormData.category}
-                    onChange={(e) => setEditFormData({ ...editFormData, category: e.target.value })}
+                    onChange={(e) => setEditFormData({...editFormData, category: e.target.value})}
                   />
                 </div>
                 <div className="flex items-center space-x-2">
                   <Switch
                     id="edit-hideNavigationBar"
                     checked={editFormData.hideNavigationBar}
-                    onCheckedChange={(checked) => setEditFormData({ ...editFormData, hideNavigationBar: checked })}
+                    onCheckedChange={(checked) => setEditFormData({...editFormData, hideNavigationBar: checked})}
                   />
                   <Label htmlFor="edit-hideNavigationBar" className="text-sm">
                     Hide navigation bar when opening this app

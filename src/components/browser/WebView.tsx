@@ -28,7 +28,6 @@ const TabWebView: React.FC<TabWebViewProps> = React.memo(({
                                                             onOpenNewTab
                                                           }) => {
   const webviewRef = useRef<Electron.WebviewTag>(null)
-
   const { addNotification } = useNotifications()
 
   useEffect(() => {
@@ -70,17 +69,9 @@ const TabWebView: React.FC<TabWebViewProps> = React.memo(({
       }
     }
 
-    const handleNewWindow = (event: any) => {
-      event.preventDefault()
-      if (event.url) {
-        onOpenNewTab(event.url)
-      }
-    }
-
     const handleConsoleMessage = (event: any) => {
       console.log('[WEBVIEW]', event.level, event.message)
     }
-
 
     const handleIpcMessage = (event: any) => {
       if (event.channel === 'webview:notification') {
@@ -94,17 +85,14 @@ const TabWebView: React.FC<TabWebViewProps> = React.memo(({
       }
     }
 
-    // Add event listeners
     webview.addEventListener('did-start-loading', handleLoadStart)
     webview.addEventListener('did-stop-loading', handleLoadStop)
     webview.addEventListener('page-title-updated', handlePageTitleUpdated)
     webview.addEventListener('page-favicon-updated', handlePageFaviconUpdated)
     webview.addEventListener('did-fail-load', handleDidFailLoad)
     webview.addEventListener('did-navigate', handleDidNavigate)
-    webview.addEventListener('new-window', handleNewWindow)
     webview.addEventListener('console-message', handleConsoleMessage)
     webview.addEventListener('ipc-message', handleIpcMessage)
-
 
     return () => {
       webview.removeEventListener('did-start-loading', handleLoadStart)
@@ -113,12 +101,8 @@ const TabWebView: React.FC<TabWebViewProps> = React.memo(({
       webview.removeEventListener('page-favicon-updated', handlePageFaviconUpdated)
       webview.removeEventListener('did-fail-load', handleDidFailLoad)
       webview.removeEventListener('did-navigate', handleDidNavigate)
-
-
-      webview.removeEventListener('new-window', handleNewWindow)
       webview.removeEventListener('console-message', handleConsoleMessage)
       webview.removeEventListener('ipc-message', handleIpcMessage)
-
     }
   }, [tab?.id, onUpdateLoading, onUpdateTitle, onUpdateFavicon, onUpdateUrl, onNavigate, onOpenNewTab])
 
@@ -190,18 +174,11 @@ const TabWebView: React.FC<TabWebViewProps> = React.memo(({
       className={`absolute inset-0 ${isActive ? 'block' : 'hidden'}`}
       style={{zIndex: isActive ? 1 : 0}}
     >
-      {tab.isLoading && (
-        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10">
-          <div className="bg-background border rounded-lg px-4 py-2 shadow-lg flex items-center gap-2">
-            <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"/>
-            <span className="text-sm">Loading...</span>
-          </div>
-        </div>
-      )}
       <webview
         ref={webviewRef}
         className={`w-full h-full bg-white ${tab.url === 'about:blank' ? 'hidden' : ''}`}
-        allowpopups={true}
+        allowpopups={'true' as any}
+        partition="persist:wv-notify"
         webpreferences="contextIsolation=true, nodeIntegration=false, webSecurity=false"
         useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:143.0) Gecko/20100101 Firefox/143.0"
       />

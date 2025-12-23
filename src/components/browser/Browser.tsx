@@ -11,7 +11,19 @@ import {SidePanel} from './SidePanel'
 import {NotificationButton} from '@/components/notifications/NotificationButton'
 import {UpdateNotification} from '../UpdateNotification'
 import {Button} from '@/components/ui/button'
-import {Menu, Minus, Navigation, Settings, Square, X, Database, Code} from 'lucide-react'
+import {
+  Menu,
+  Minus,
+  Navigation,
+  Settings,
+  Square,
+  X,
+  Database,
+  Code,
+  ChevronLeft,
+  PanelLeftOpen,
+  HistoryIcon, Info
+} from 'lucide-react'
 import { PanelGroup, Panel, PanelResizeHandle } from 'react-resizable-panels'
 import {
   DropdownMenu,
@@ -71,7 +83,7 @@ const BrowserMenu: React.FC<BrowserMenuProps> = ({onOpenSettings}) => {
           Show Navigation Bar
         </DropdownMenuCheckboxItem>
         <DropdownMenuItem onClick={handleOpenSidePanel}>
-          <Navigation className="h-4 w-4 mr-2"/>
+          <PanelLeftOpen className="h-4 w-4 mr-2"/>
           Open Side Panel
         </DropdownMenuItem>
         <DropdownMenuSeparator/>
@@ -91,6 +103,7 @@ const BrowserMenu: React.FC<BrowserMenuProps> = ({onOpenSettings}) => {
         <HistoryPanel
           trigger={
             <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+              <HistoryIcon className="h-4 w-4 mr-2"/>
               History
             </DropdownMenuItem>
           }
@@ -104,6 +117,7 @@ const BrowserMenu: React.FC<BrowserMenuProps> = ({onOpenSettings}) => {
         </DropdownMenuItem>
         <DropdownMenuSeparator/>
         <DropdownMenuItem>
+          <Info className="h-4 w-4 mr-2"/>
           About App
         </DropdownMenuItem>
       </DropdownMenuContent>
@@ -206,22 +220,39 @@ const BrowserContent: React.FC = () => {
     updateTitle()
   }, [activeTab?.title, activeTab?.id])
 
+  const createTabRef = React.useRef(createTab)
+  const setPanelUrlRef = React.useRef(setPanelUrl)
+  createTabRef.current = createTab
+  setPanelUrlRef.current = setPanelUrl
+
   useEffect(() => {
     const ipc = (window as any).electron?.ipcRenderer
     if (!ipc) return
+    let lastOpenedUrl = ''
+    let lastOpenedTime = 0
     const onCreateTab = (_e: any, payload: { url: string }) => {
-      if (payload?.url) createTab(payload.url)
+      if (payload?.url) createTabRef.current(payload.url)
+    }
+    const onOpenNewTab = (_e: any, payload: { url: string }) => {
+      if (!payload?.url) return
+      const now = Date.now()
+      if (payload.url === lastOpenedUrl && now - lastOpenedTime < 500) return
+      lastOpenedUrl = payload.url
+      lastOpenedTime = now
+      createTabRef.current(payload.url)
     }
     const onSendToPanel = (_e: any, payload: { url: string | null }) => {
-      setPanelUrl(payload?.url ?? null)
+      setPanelUrlRef.current(payload?.url ?? null)
     }
     ipc.on('host:create-tab', onCreateTab)
+    ipc.on('host:open-new-tab', onOpenNewTab)
     ipc.on('host:send-to-panel', onSendToPanel)
     return () => {
       ipc.removeListener('host:create-tab', onCreateTab)
+      ipc.removeListener('host:open-new-tab', onOpenNewTab)
       ipc.removeListener('host:send-to-panel', onSendToPanel)
     }
-  }, [createTab, setPanelUrl])
+  }, [])
 
 
 
@@ -240,7 +271,8 @@ const BrowserContent: React.FC = () => {
               onClick={() => setShowSettings(false)}
               className="h-8 px-3"
             >
-              ← Back to Workspace
+              <ChevronLeft className="h-4 w-4"/>
+              Back to Workspace
             </Button>
             <span className="text-sm font-medium">Settings</span>
           </div>
